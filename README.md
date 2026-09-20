@@ -1,5 +1,8 @@
 
-```
+```java
+
+        // Example utilization
+
         // ---- Dataset initialization ----
         List<Person> people = Arrays.asList(
                 new Person(20, 180, 60),
