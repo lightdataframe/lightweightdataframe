@@ -1,0 +1,1 @@
+packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"io.github.lightdataframe.lightweightdataframe"},{"l":"io.github.lightdataframe.lightweightdataframe.examples.gaussian"},{"l":"io.github.lightdataframe.lightweightdataframe.examples.hotels"},{"l":"io.github.lightdataframe.lightweightdataframe.examples.persons"}];updateSearchResults();
