@@ -67,8 +67,6 @@ public class Plotter implements Serializable, Cloneable
         new SwingWrapper(chart).displayChart();
     }
 
-
-
     /**
      * Creates a line chart from the specified dataframe. Each column in the dataframe is plotted as a separate series
      * with the row indices used as the x-axis values.
@@ -100,8 +98,6 @@ public class Plotter implements Serializable, Cloneable
 
         new SwingWrapper(chart).displayChart();
     }
-
-
 
     /**
      * Creates a line chart using the provided list of series.

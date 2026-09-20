@@ -35,7 +35,7 @@ public class Grouper implements Serializable, Cloneable
     }
 
     /**
-     * Splits the dataframe into the specified number of groups.
+     * Splits the dataframe into the specified number of groups. Rows are split in dataframe order.
      *
      * @param splits the number of groups to split the dataframe rows into. Must be greater than 0.
      * @return the current Grouper instance with the updated row grouping strategy.

@@ -1,22 +1,6 @@
-package io.github.lightdataframe.lightweightdataframe.examples.persons;
 
-import io.github.lightdataframe.lightweightdataframe.*;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
-
-public class PersonExample
-{
-    public static final String HEIGHT = "height";
-    public static final String WEIGHT = "weight";
-    public static final String AGE = "age";
-
-
-    public static void main(String[] args)
-    {
-
+```
+        // ---- Dataset initialization ----
         List<Person> people = Arrays.asList(
                 new Person(20, 180, 60),
                 new Person(60, 156, 76),
@@ -31,9 +15,11 @@ public class PersonExample
         );
 
 
-        // ---- Series ----
-
+        // ---- Series Example ----
+        
+        // Collect people into a Series
         Series peopleAge = people.stream().collect(Series.collector(Person::getAge));
+
 
         // ---- Statistics ----
 
@@ -42,8 +28,9 @@ public class PersonExample
         double maxAge = peopleAge.max();
 
 
-        // ---- Dataframe ----
-
+        // ---- Dataframe Example ----
+        
+        // Collect people into a Dataframe
         Dataframe df = people.stream()
                 .collect(
                         Dataframe.<Person>collector()
@@ -51,8 +38,11 @@ public class PersonExample
                                 .addColumn(WEIGHT, Person::getWeight)
                                 .addColumn(AGE, Person::getAge)
                 );
-
+        
+        
+        // Print dataframe statistics
         df.printStatistics();
+
 
         // ---- Sorting ----
 
@@ -98,6 +88,7 @@ public class PersonExample
         Plotter plotter = new Plotter();
 
         plotter.line(groupByAgeAggregated);
+```
 
-    }
-}
+
+![](./plot.png)

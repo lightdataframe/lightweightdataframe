@@ -500,6 +500,17 @@ public class Dataframe implements Serializable, Cloneable
         return grouper.group(this);
     }
 
+    /**
+     * Aggregates data from the current instance using the provided aggregator.
+     *
+     * @param aggregator the aggregator performing the aggregation
+     * @return a map where keys are strings for the aggregation names
+     *         and the values are doubles for the aggregated values
+     */
+    public Map<String, Double> aggregate(Aggregator aggregator)
+    {
+        return aggregator.aggregate(this);
+    }
 
     /**
      * Groups and aggregates the data in the current dataframe using the specified aggregator
