@@ -1,4 +1,19 @@
 
+Lightweight library implementing Dataframe and Series objects for scientific and Data Science computations.
+
+Supports the following operations:
+
+- Creation of Dataframe and Series objects
+- Collection of objects into a Dataframe or Series through the stream API
+- Compute statistics
+- Sorting rows
+- Grouping rows
+- Aggregating rows
+- Group-Aggregate rows
+- Plotting
+- JSON serialization
+
+
 ```java
 
         // Example utilization
@@ -91,6 +106,16 @@
         Plotter plotter = new Plotter();
 
         plotter.line(groupByAgeAggregated);
+
+        
+        // ---- JSON Serialization ----
+
+        Serializer serializer = new Serializer();
+
+        String json = serializer.toJson(JsonFormat.COLUMNS_ROWS, df);
+
+        Dataframe reconstructed = serializer.fromJson(JsonFormat.COLUMNS_ROWS, json);
+        
 ```
 
 

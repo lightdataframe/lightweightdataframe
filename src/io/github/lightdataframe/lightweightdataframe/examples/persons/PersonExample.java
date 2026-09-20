@@ -99,5 +99,15 @@ public class PersonExample
 
         plotter.line(groupByAgeAggregated);
 
+
+
+        // ---- JSON Serialization ----
+
+        Serializer serializer = new Serializer();
+
+        String json = serializer.toJson(JsonFormat.COLUMNS_ROWS, df);
+
+        Dataframe reconstructed = serializer.fromJson(JsonFormat.COLUMNS_ROWS, json);
+
     }
 }
