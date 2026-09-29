@@ -14,7 +14,6 @@ public class HotelExample
     public static final String CAPACITY = "capacity";
     public static final String PRICE_PER_NIGHT = "price_per_night";
     public static final String ROOM_TYPE = "room_type";
-    public static final String AVERAGE_PRICE = "average_price";
     public static final String AVERAGE_CAPACITY = "average_capacity";
     private static final String AVERAGE_PRICE_PER_NIGHT = "average_price_per_night";
 
@@ -57,25 +56,25 @@ public class HotelExample
         df.print();
 
         df = df.groupAggregate(
-                new Grouper().groupByColumnValues(ROOM_TYPE),
-                new Aggregator()
-                .addAggregation(PRICE_PER_NIGHT, AVERAGE_PRICE, Series::mean)
-                .addAggregation(CAPACITY, AVERAGE_CAPACITY, Series::mean)
-                .addAggregation(PRICE_PER_NIGHT, AVERAGE_PRICE_PER_NIGHT, Series::mean))
-                .replaceColumn(AVERAGE_PRICE, Series::normalized)
+                        new Grouper().groupByColumnValues(ROOM_TYPE),
+                        new Aggregator()
+                                .addAggregation(AVERAGE_CAPACITY, df0 -> df0.getColumn(CAPACITY).average())
+                                .addAggregation(AVERAGE_PRICE_PER_NIGHT, df0 -> df0.getColumn(PRICE_PER_NIGHT).average())
+                                .addAggregation(ROOM_TYPE, df0 -> df0.getColumn(ROOM_TYPE).first())
+                )
+                .replaceColumn(AVERAGE_PRICE_PER_NIGHT, Series::normalized)
                 .replaceColumn(AVERAGE_CAPACITY, Series::normalized)
-                .sort(new Sorter().sortByColumn(ROOM_TYPE, true));
+                .sort(true, new Sorter().sortByColumn(ROOM_TYPE, v -> v));
 
         Plotter plotter = new Plotter();
 
         plotter.line(
-                df.getColumn(AVERAGE_PRICE),
+                df.getColumn(AVERAGE_PRICE_PER_NIGHT),
                 df.getColumn(AVERAGE_CAPACITY)
         );
 
         plotter.scatter(
-                df.getColumn(AVERAGE_PRICE), df.getColumn(AVERAGE_CAPACITY),
-                df.getColumn(AVERAGE_PRICE), df.getColumn(AVERAGE_PRICE_PER_NIGHT)
+                df.getColumn(AVERAGE_PRICE_PER_NIGHT), df.getColumn(AVERAGE_CAPACITY)
         );
 
     }

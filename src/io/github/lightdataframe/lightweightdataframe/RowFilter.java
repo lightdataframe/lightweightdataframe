@@ -11,7 +11,7 @@ public interface RowFilter extends Serializable
 {
     /**
      * Tests a specific row in the given dataframe to determine if it meets
-     * certain conditions defined by the implementation.
+     * certain conditions.
      *
      * @param df the dataframe containing the data to be tested
      * @param n the index of the row to test

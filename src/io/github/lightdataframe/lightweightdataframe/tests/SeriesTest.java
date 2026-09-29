@@ -62,7 +62,7 @@ class SeriesTest
 
         Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d, 10d));
 
-        double mean = series.mean();
+        double mean = series.average();
         double std = series.std();
         Series zscore = series.zscore();
         assertEquals(series, zscore.map(v -> new BigDecimal(v * std + mean).setScale(8, RoundingMode.DOWN).doubleValue()));
@@ -130,9 +130,9 @@ class SeriesTest
     void mean()
     {
         Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d));
-        assertEquals(2.5, series.mean());
+        assertEquals(2.5, series.average());
 
-        assertEquals(Double.NaN, new Series().mean());
+        assertEquals(Double.NaN, new Series().average());
     }
 
     @Test
@@ -240,6 +240,15 @@ class SeriesTest
     @Test
     void plot()
     {
+    }
+
+    @Test
+    void slidingWindow()
+    {
+        Series s = Series.from();
+
+        double median = s.median();
+
     }
 
     @Test

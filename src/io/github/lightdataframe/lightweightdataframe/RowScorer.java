@@ -10,7 +10,7 @@ public interface RowScorer extends Serializable
     /**
      * Computes and returns the score for a specific row in the given dataframe.
      *
-     * @param df the dataframe containing the data
+     * @param df the dataframe containing to score rows from
      * @param n the index of the row to be scored
      * @return the computed score
      */

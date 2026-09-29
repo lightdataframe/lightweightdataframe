@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.function.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.stream.IntStream;
 
 
 
@@ -64,8 +64,7 @@ public class Dataframe implements Serializable, Cloneable
     /**
      * Sets a column in the dataframe with the specified name and data from the given series.
      * If the dataframe already contains rows, the series must have the same size as the dataframe.
-     * If the dataframe is empty, the new column will initialize the dataframe with rows corresponding
-     * to the size of the series.
+     * If the dataframe is empty, the new column will initialize the dataframe.
      *
      * @param column the name of the column to set or add
      * @param series the series containing the data for the column
@@ -92,9 +91,8 @@ public class Dataframe implements Serializable, Cloneable
         }
         else
         {
-            newData = Stream.iterate(0, i -> i + 1)
-                    .limit(size())
-                    .map(i ->
+            newData = IntStream.range(0, size())
+                    .mapToObj(i ->
                     {
                         Map<String, Double> row = new LinkedHashMap<>(getRow(i));
                         row.put(column, series.get(i));
@@ -107,14 +105,21 @@ public class Dataframe implements Serializable, Cloneable
         return d;
     }
 
+    /**
+     * Replaces the values of a column in the Dataframe with the results of applying a function to the column's current values.
+     *
+     * @param column      name of the column to be replaced. Must exist in the Dataframe.
+     * @param mapFunction function that takes a Series and returns a Series with the same size as the original Series.
+     * @return a new Dataframe instance with the specified column replaced
+     */
     public Dataframe replaceColumn(String column, Function<Series, Series> mapFunction)
     {
-        if(!getColumns().contains(column))
+        if (!getColumns().contains(column))
             throw new IllegalArgumentException("Column " + column + " not found");
 
         Series colSeries = getColumn(column);
         Series newSeries = mapFunction.apply(colSeries);
-        if(newSeries.size() != colSeries.size())
+        if (newSeries.size() != colSeries.size())
             throw new IllegalArgumentException("Series size must be equal to column size");
 
         return setColumn(column, newSeries);
@@ -182,11 +187,15 @@ public class Dataframe implements Serializable, Cloneable
      * Rows keys are ordered by the column names in the dataframe.
      * Modifications to the rows are not propagated to the Dataframe.
      *
-     * @return a list of maps, where each map contains the column-value pairs for a row.
+     * @return a list of unmodifiable maps, where each map contains the column-value pairs for a row.
      */
     public List<Map<String, Double>> getRows()
     {
-        return Collections.unmodifiableList(data.stream().map(LinkedHashMap::new).collect(Collectors.toList()));
+        return Collections.unmodifiableList(
+                data.stream()
+                        .map(Collections::unmodifiableMap)
+                        .collect(Collectors.toList())
+        );
     }
 
 
@@ -196,7 +205,7 @@ public class Dataframe implements Serializable, Cloneable
      * Modifications to the rows are not propagated to the Dataframe.
      *
      * @param n the index of the row to retrieve; must be within valid bounds (0 to data.size() - 1)
-     * @return a map representing the row at the specified index, where the key is a String and the value is a Double
+     * @return an unmodifiable map representing the row at the specified index, where the key is a String and the value is a Double
      * @throws IllegalArgumentException if the index is out of bounds
      */
     public Map<String, Double> getRow(int n)
@@ -204,7 +213,7 @@ public class Dataframe implements Serializable, Cloneable
         if(n < 0 || n >= data.size())
             throw new IllegalArgumentException("Index out of bounds");
 
-        return new LinkedHashMap<>(data.get(n));
+        return Collections.unmodifiableMap(data.get(n));
     }
 
 
@@ -235,17 +244,23 @@ public class Dataframe implements Serializable, Cloneable
         if(!data.isEmpty() && !row.keySet().containsAll(getColumns()))
             throw new IllegalArgumentException("Attempting to add a row with invalid columns");
 
-
-        Dataframe df = inplace ? this : new Dataframe();
-        LinkedHashMap<String, Double> newRow;
-
-        if(data.isEmpty())
-        {
-            newRow = new LinkedHashMap<>(row);
-        }
+        Dataframe df;
+        if(inplace)
+            df = this;
         else
         {
-            newRow = getColumns().stream()
+            df = new Dataframe();
+            df.data.addAll(data);
+        }
+
+
+        LinkedHashMap<String, Double> newRow;
+
+        if(df.data.isEmpty())
+            newRow = new LinkedHashMap<>(row);
+        else
+        {
+            newRow = df.getColumns().stream()
                     .collect(Collectors.toMap(
                             column -> column,
                             row::get,
@@ -256,29 +271,6 @@ public class Dataframe implements Serializable, Cloneable
 
         df.data.add(newRow);
         return df;
-    }
-
-
-    /**
-     * Removes rows from the Dataframe where a value in the specified column satisfies the given predicate.
-     *
-     * @param column The name of the column to evaluate for filtering rows. Must exist in the Dataframe.
-     * @param predicate A predicate function that returns true for rows to be removed based on the value in the specified column.
-     * @return A new Dataframe containing rows that do not satisfy the given predicate for the specified column.
-     * @throws IllegalArgumentException If the specified column does not exist in the Dataframe.
-     */
-    public Dataframe dropRows(String column, Predicate<Double> predicate)
-    {
-        if(!getColumns().contains(column))
-            throw new IllegalArgumentException("Column " + column + " not found");
-
-
-        List<Map<String, Double>> newData = data.stream()
-                .filter(row -> predicate.test(row.get(column)))
-                .collect(Collectors.toList());
-        Dataframe d = new Dataframe();
-        d.data = newData;
-        return d;
     }
 
 
@@ -296,7 +288,7 @@ public class Dataframe implements Serializable, Cloneable
             throw new IllegalArgumentException("One or more columns not found: [" + Arrays.toString(columns) + "] in [" + getColumns() + "]");
 
 
-        List<String> currentColumns = getColumns();
+        List<String> currentColumns = new ArrayList<>(getColumns());
         currentColumns.sort(Comparator.comparing(column -> Arrays.binarySearch(columns, column)));
         List<Map<String, Double>> newData = data.stream()
                 .map(row ->
@@ -342,7 +334,7 @@ public class Dataframe implements Serializable, Cloneable
                 {
                     Series columnSeries = getColumn(column);
                     Map<String, Double> stats = new LinkedHashMap<>();
-                    stats.put("mean", columnSeries.mean());
+                    stats.put("mean", columnSeries.average());
                     stats.put("std", columnSeries.std());
                     stats.put("var", columnSeries.var());
                     stats.put("min", columnSeries.min());
@@ -360,7 +352,11 @@ public class Dataframe implements Serializable, Cloneable
         return df;
     }
 
-
+    /**
+     * Maximum number of lines to print when calling {@link #print()} or {@link #printStatistics()} methods.
+     * If the number of rows is greater than this value, middle values are skipped and only the head and tail
+     * of the dataframe are printed.
+     */
     private static final int maxPrintedRows = 13;
 
 
@@ -372,7 +368,7 @@ public class Dataframe implements Serializable, Cloneable
         StringBuilder sb = new StringBuilder();
         List<String> columns = getColumns();
         buildHeader(sb, columns);
-        if(size() < maxPrintedRows)
+        if(size() <= maxPrintedRows)
         {
             for (Map<String, Double> row : data)
                 buildStatsLine(sb, "", row);
@@ -393,6 +389,7 @@ public class Dataframe implements Serializable, Cloneable
                     .sorted(Comparator.comparingInt(row -> - data.indexOf(row)))
                     .limit(maxPrintedRows / 2)
                     .collect(Collectors.toList());
+            tail.sort(Comparator.comparingInt(row -> - tail.indexOf(row)));
             for (Map<String, Double> row : tail)
                 buildStatsLine(sb, "", row);
         }
@@ -422,19 +419,24 @@ public class Dataframe implements Serializable, Cloneable
         System.out.print(sb);
     }
 
+    /*
+    Builds the header of the dataframe for print methods.
+     */
     private void buildHeader(StringBuilder sb, List<String> columns)
     {
         sb.append(String.format("%20s", ""));
-        for(String col : columns)
+        for (String col : columns)
             sb.append(String.format("%20s", col));
         sb.append("\n");
     }
 
-
+    /*
+    Builds a line of the dataframe for print methods.
+     */
     private void buildStatsLine(StringBuilder sb, String columnName, Map<String, Double> row)
     {
         sb.append(String.format("%20s", columnName));
-        for(Double cval : row.values())
+        for (Double cval : row.values())
             sb.append(String.format("%20.3f", cval));
         sb.append("\n");
     }
@@ -450,7 +452,10 @@ public class Dataframe implements Serializable, Cloneable
         return df;
     }
 
-
+    /**
+     * Returns a compact string representation of the dataframe
+     * @return  a compact string representation of the dataframe
+     */
     @Override
     public String toString()
     {
@@ -462,50 +467,83 @@ public class Dataframe implements Serializable, Cloneable
     }
 
     /**
-     * Compares the dataframe to the specified object for equality.
-     * Returns true if the specified object is a dataframe and the contained data is exactly the same.
-     *
-     * @param o the object to be compared for equality with this instance
-     * @return true if the specified object is equal to this instance; false otherwise
+     * Sorts the dataframe rows by the given {@link RowScorer}.<br>
+     * See {@link Sorter} for common scoring strategies.
+     * @param ascending true if the rows should be sorted in ascending order, false otherwise
+     * @param scorer    the scorer to use for sorting the rows
+     * @return a new dataframe containing the sorted rows
      */
-    @Override
-    public boolean equals(Object o)
+    public Dataframe sort(boolean ascending, RowScorer scorer)
     {
-        if (o == null || getClass() != o.getClass()) return false;
-        Dataframe dataframe = (Dataframe) o;
-        return Objects.equals(data, dataframe.data);
-    }
-
-
-    /**
-     * Filters the current dataframe using the specified {@link Filter}.
-     *
-     * @param filter the filter to apply to the dataframe
-     * @return a new dataframe containing only the rows that meet the filter criteria
-     */
-    public Dataframe filter(Filter filter)
-    {
-        return filter.filter(this);
-    }
-
-
-    /**
-     * Groups the current dataframe based on the specified {@link Grouper} logic.
-     *
-     * @param grouper the {@link Grouper} instance defining the grouping logic
-     * @return a map where the keys represent group identifiers and the values are dataframes for each group
-     */
-    public Map<Object, Dataframe> group(Grouper grouper)
-    {
-        return grouper.group(this);
+        double dir = ascending ? 1 : -1;
+        List<Map<String, Double>> sortedData = IntStream.range(0, size())
+                .boxed()
+                .sorted(Comparator.comparingDouble(n -> dir * scorer.getRowScore(this, n)))
+                .map(this::getRow)
+                .collect(Collectors.toList());
+        Dataframe df = new Dataframe();
+        df.data = sortedData;
+        return df;
     }
 
     /**
-     * Aggregates data from the current instance using the provided aggregator.
+     * Groups the dataframe rows by the given {@link RowGrouper}.<br>
+     * For example, grouping the given rows in the following way:<br>
+     * row0: [group0, group1]<br>
+     * row1: [group1, group2]<br>
+     * row2: [group2]<br>
+     * <p>
+     * results into the groups:<br>
+     * group0: [row0]<br>
+     * group1: [row0, row1]<br>
+     * group2: [row1, row2]<br>
+     * <p>
+     * See {@link Grouper} for common grouping strategies.
      *
-     * @param aggregator the aggregator performing the aggregation
-     * @return a map where keys are strings for the aggregation names
-     *         and the values are doubles for the aggregated values
+     * @param grouper grouper to group the rows by
+     * @return a map of groups, where the key is the group identifier and the value is a new Dataframe containing the rows in the group.
+     */
+    public Map<Object, Dataframe> group(RowGrouper grouper)
+    {
+        Map<Object, Dataframe> groups = new LinkedHashMap<>();
+
+        for (int i = 0; i < size(); i++)
+        {
+            Map<String, Double> row = getRow(i);
+            List<Object> rowGroups = grouper.getRowGroups(this, i);
+            for (Object grp : rowGroups)
+            {
+                if (!groups.containsKey(grp))
+                    groups.put(grp, new Dataframe());
+                groups.get(grp).append(true, row);
+            }
+        }
+        return groups;
+    }
+
+    /**
+     * Filters the dataframe rows by the given {@link RowFilter}.<br>
+     * See {@link Filter} for common filtering strategies.
+     *
+     * @param filter filter to use for filtering the rows
+     * @return a new dataframe containing the filtered rows
+     */
+    public Dataframe filter(RowFilter filter)
+    {
+        List<Map<String, Double>> filteredData = IntStream.range(0, size())
+                .filter(i -> filter.testRow(this, i))
+                .mapToObj(this::getRow)
+                .collect(Collectors.toList());
+        Dataframe df = new Dataframe();
+        df.data = filteredData;
+        return df;
+    }
+
+    /**
+     * Aggregates the dataframe rows by the given {@link Aggregator}.<br>
+     *
+     * @param aggregator aggregator to use for aggregating the rows
+     * @return a single row containing the aggregated values
      */
     public Map<String, Double> aggregate(Aggregator aggregator)
     {
@@ -513,41 +551,26 @@ public class Dataframe implements Serializable, Cloneable
     }
 
     /**
-     * Groups and aggregates the data in the current dataframe using the specified aggregator
-     * and grouper. The grouper defines how the data is grouped, while the aggregator computes
-     * aggregated values for the grouped data.
+     * Performs a group-by-and-aggregate operation on the dataframe, using the given {@link RowGrouper} and {@link RowFilter}.<br>
      *
-     * @param grouper    a {@link Grouper} instance that defines the grouping logic for the data.
-     * @param aggregator an {@link Aggregator} instance responsible for computing aggregated values
-     *                   for the grouped data.
-     * @return a new dataframe containing the grouped and aggregated data.
+     * @param grouper    grouper to group the rows by
+     * @param aggregator aggregator to use for aggregating the rows in each group
+     * @return a new dataframe containing the aggregated values for each group
      */
-    public Dataframe groupAggregate(Grouper grouper, Aggregator aggregator)
+    public Dataframe groupAggregate(RowGrouper grouper, Aggregator aggregator)
     {
-        return aggregator.groupAggregate(this, grouper);
+        Map<Object, Dataframe> groups = group(grouper);
+
+        List<Map<String, Double>> aggregated = groups.values()
+                .stream()
+                .map(aggregator::aggregate)
+                .collect(Collectors.toList());
+
+
+        Dataframe df = new Dataframe();
+        df.data = aggregated;
+        return df;
     }
-
-
-    /**
-     * Sorts the dataframe using the provided Sorter and returns a new sorted Dataframe.
-     *
-     * @param sorter a Sorter instance that defines the sorting criteria to be applied to the Dataframe
-     * @return a new Dataframe instance sorted according to the specified criteria
-     */
-    public Dataframe sort(Sorter sorter)
-    {
-        return sorter.sort(this);
-    }
-
-
-    /**
-     * Generates and displays a line plot for every column.
-     */
-    public void plot()
-    {
-        new Plotter().line(this);
-    }
-
 
 
     /**
@@ -582,6 +605,13 @@ public class Dataframe implements Serializable, Cloneable
 
         private Collector() {}
 
+        /**
+         * Configures a column for the result Dataframe
+         *
+         * @param columnName   name of the column
+         * @param columnGetter function to extract the column value from the input element
+         * @return this instance for method chaining
+         */
         public Collector<T> addColumn(String columnName, Function<T, Number> columnGetter)
         {
             functions.put(columnName, x -> columnGetter.apply(x).doubleValue());

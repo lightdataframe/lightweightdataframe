@@ -69,7 +69,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
      * For example, for grouping negative and positive values:
      * {@code series.groupBy(v -> v > 0 ? 1d : 0d);}
      *
-     * @param groupFunction a function that computes a grouping key (double value) for each element in the Series
+     * @param groupFunction a stateless function that computes a grouping key (double value) for each element in the Series
      * @return a map where the keys are the unique grouping values produced by the {@code groupFunction},
      * and the values are Series containing the elements that correspond to each group
      */
@@ -77,16 +77,14 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     {
         List<Double> groups = stream().mapToDouble(groupFunction).boxed().distinct().collect(Collectors.toList());
 
-        Map<Double, Series> map = new HashMap<>();
+        Map<Double, Series> result = new HashMap<>();
         for (Double group : groups)
         {
-            map.put(
-                    group,
-                    stream().filter(v -> groupFunction.applyAsDouble(v) == group).collect(collector(v -> v))
-            );
+            Series series = stream().filter(v -> groupFunction.applyAsDouble(v) == group).collect(collector(v -> v));
+            result.put(group, series);
         }
 
-        return map;
+        return result;
     }
 
     /**
@@ -165,7 +163,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
      */
     public Series zscore()
     {
-        double mean = mean();
+        double mean = average();
         double std = std();
         return map(v -> (v - mean) / std);
     }
@@ -262,7 +260,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     public Series between(int from, int to)
     {
         if(from > to || from < 0 || to > size())
-            throw new IllegalArgumentException("Invalid from to indeces");
+            throw new IllegalArgumentException("Invalid indexes");
         return new Series(subList(from, to));
     }
 
@@ -301,7 +299,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
         if (step <= 0 || window <= 0)
             throw new IllegalArgumentException("step and window must be positive");
         List<Series> result = new ArrayList<>();
-        for (int i = 0; i < size() - window + 1; i += step)
+        for (int i = 0; i < size() - step + 1; i += step)
             result.add(between(i, Math.min(size(), i + window)));
         return result;
     }
@@ -309,36 +307,23 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     /**
      * Calculates the dot product of the current series with the given series.
      *
-     * @param s the series to compute the dot product with
+     * @param other the series to compute the dot product with
      * @return the resulting dot product as a double value
      */
-    public double dot(Series s)
+    public double dot(Series other)
     {
-        return zip(s, (a, b) -> a * b).sum();
-    }
-
-    /**
-     * Multiplies the elements of this Series with the corresponding elements of another Series.
-     *
-     * @param other The Series to multiply with this Series.
-     * @return A new Series containing the products of the corresponding elements
-     */
-    public Series mul(Series other)
-    {
-        return zip(other, (a, b) -> a * b);
+        return zip(other, (a, b) -> a * b).sum();
     }
 
 
     /**
      * Computes and returns the sum of all numerical values contained in the Series.
-     * If the Series is empty or has nan values, the method returns {@code Double.NaN}.
+     * If the Series has nan values the method returns {@code Double.NaN}.
      *
-     * @return the sum of all values in the Series as a double, or {@code Double.NaN} if the Series is empty or has nan values
+     * @return the sum of all values in the Series as a double, or {@code Double.NaN} if the Series has nan values
      */
     public double sum()
     {
-        if(isEmpty())
-            return Double.NaN;
         return stream().mapToDouble(d -> d).sum();
     }
 
@@ -365,14 +350,14 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     }
 
     /**
-     * Calculates and returns the mean of the numerical values in the Series.
+     * Calculates and returns the average of the numerical values in the Series.
      * The mean is the arithmetic average, computed by summing all elements
      * and dividing by the number of elements. If the Series is empty or has nan values,
      * the method returns {@code Double.NaN}.
      *
      * @return the mean value of the Series as a double, or {@code Double.NaN} if the Series is empty or has nan values
      */
-    public double mean()
+    public double average()
     {
         return stream().mapToDouble(d -> d).average().orElse(Double.NaN);
     }
@@ -387,9 +372,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
      */
     public double var()
     {
-        if(isEmpty())
-            return Double.NaN;
-        double mean = mean();
+        double mean = average();
         double n = size();
         return stream().mapToDouble(x -> Math.pow(x - mean, 2) / n).sum();
     }
@@ -484,7 +467,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
         Map<String, Double> stats = new LinkedHashMap<>();
 
         stats.put("size", (double) size());
-        stats.put("mean", mean());
+        stats.put("average", average());
         stats.put("std", std());
         stats.put("var", var());
         stats.put("min", min());
@@ -522,7 +505,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     }
 
     /**
-     * Returns a string representation of the series.
+     * Returns a compact string representation of the series.
      *
      * @return a string containing the elements of the series, separated by commas
      */

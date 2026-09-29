@@ -16,7 +16,6 @@ public class PersonExample
 
     public static void main(String[] args)
     {
-
         List<Person> people = Arrays.asList(
                 new Person(20, 180, 60),
                 new Person(60, 156, 76),
@@ -37,7 +36,7 @@ public class PersonExample
 
         // ---- Statistics ----
 
-        double averageAge = peopleAge.mean();
+        double averageAge = peopleAge.average();
         double minAge = peopleAge.min();
         double maxAge = peopleAge.max();
 
@@ -54,42 +53,51 @@ public class PersonExample
 
         df.printStatistics();
 
-        // ---- Sorting ----
 
+        // ---- Sorting ----
 
         Sorter sorter = new Sorter();
 
-        Dataframe sortedDataframe = sorter.sortByColumn(AGE, true).sort(df);
+        Dataframe sortedDataframe = df.sort( true, sorter.sortByColumn(AGE, age -> age));
 
-        Dataframe shuffledDataframe = sorter.shuffle().sort(df);
+        Dataframe shuffledDataframe = df.sort( true, sorter.shuffle());
 
 
         // ---- Grouping ----
 
         Grouper grouper = new Grouper();
 
-        Map<Object, Dataframe> groupedByAge = grouper.groupByColumnValues(AGE).group(df);
+        Map<Object, Dataframe> groupedByAge = df.group(grouper.groupByColumnValues(AGE));
 
-        Map<Object, Dataframe> splits = grouper.split(3).group(df);
+        Map<Object, Dataframe> splits = df.group(grouper.split(3));
+
+
+        // ---- Filtering ----
+
+        Filter filter = new Filter();
+
+        Dataframe head = df.filter(filter.head(2));
+        Dataframe between = df.filter(filter.between(3, 4));
+        Dataframe tail = df.filter(filter.tail(2));
+
+        Dataframe filteredByAge = df.filter(filter.rowTest(row -> row.get(AGE) >= 30));
 
 
         // ---- Aggregation ----
 
         // Aggregates columns "weight", "height" and "age" into their min and max values
         Aggregator aggregator = new Aggregator()
-                .addAggregation(WEIGHT, "max weight", Series::max)
-                .addAggregation(WEIGHT, "min weight", Series::min)
-                .addAggregation(HEIGHT, "max height", Series::max)
-                .addAggregation(HEIGHT, "min height", Series::min)
-                .addAggregation(AGE, "min age", Series::min)
-                .addAggregation(AGE, "max age", Series::max);
-
-        Map<String, Double> aggregation = aggregator.aggregate(df);
+                .addAggregation("max weight", df0 -> df0.getColumn(WEIGHT).max())
+                .addAggregation("min weight", df0 -> df0.getColumn(WEIGHT).min())
+                .addAggregation("max height", df0 -> df0.getColumn(HEIGHT).max())
+                .addAggregation("min height", df0 -> df0.getColumn(HEIGHT).min())
+                .addAggregation("min age", df0 -> df0.getColumn(AGE).min())
+                .addAggregation("max age", df0 -> df0.getColumn(AGE).max());
 
 
-        Dataframe groupByAgeAggregated = aggregator.groupAggregate(
-                df,
-                grouper.groupByColumnValues(AGE)
+        Dataframe groupByAgeAggregated = df.groupAggregate(
+                grouper.groupByColumnValues(AGE),
+                aggregator
         );
 
 

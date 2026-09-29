@@ -1,4 +1,6 @@
 io.github.lightdataframe.lightweightdataframe
-io.github.lightdataframe.lightweightdataframe.examples.series.gaussian
+io.github.lightdataframe.lightweightdataframe.examples.cars
+io.github.lightdataframe.lightweightdataframe.examples.gaussian
 io.github.lightdataframe.lightweightdataframe.examples.hotels
 io.github.lightdataframe.lightweightdataframe.examples.persons
+io.github.lightdataframe.lightweightdataframe.tests

@@ -17,7 +17,7 @@ public class Room
     {
         return new Room(
                 (int) (Math.random() * 3 + baseCapacity),
-                (int) Math.round(Math.random() * 5),
+                (int) (Math.random() * 5),
                 (Math.random() * 1000 + basePricePerNight)
         );
     }

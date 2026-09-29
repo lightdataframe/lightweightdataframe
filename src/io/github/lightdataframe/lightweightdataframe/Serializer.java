@@ -99,8 +99,9 @@ public class Serializer
             {
                 Map<String, Double> row = new LinkedHashMap<>();
                 JSONObject jobj = jarr.getJSONObject(i);
-                for(String keys : jobj.keySet())
-                    row.put(keys, jobj.getDouble(keys));
+                List<String> sortedKeys = jobj.keySet().stream().sorted().collect(Collectors.toList());
+                for(String key : sortedKeys)
+                    row.put(key, jobj.getDouble(key));
                 rows.add(row);
             }
         }
@@ -119,13 +120,15 @@ public class Serializer
         try
         {
             JSONObject jobj = new JSONObject(json);
-            for(String column : jobj.keySet())
+            List<String> sortedKeys = jobj.keySet().stream().sorted().collect(Collectors.toList());
+
+            for(String key : sortedKeys)
             {
-                JSONArray jarr = jobj.getJSONArray(column);
+                JSONArray jarr = jobj.getJSONArray(key);
                 List<Double> columnValues = new ArrayList<>();
                 for(int i = 0; i < jarr.length(); i++)
                     columnValues.add(jarr.getDouble(i));
-                parsed.put(column, columnValues);
+                parsed.put(key, columnValues);
             }
         }
         catch (Exception e)

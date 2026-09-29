@@ -19,7 +19,7 @@ public class Plotter implements Serializable, Cloneable
 {
 
     /**
-     * Plots a chart of the given dataframe using the specified column as the x-axis and one or more columns as the y-axis.
+     * Displays a chart of the given dataframe using the specified column as the x-axis and one or more columns as the y-axis.
      * By default, if no y-axis columns are specified, all columns except the x-axis column will be plotted.
      *
      * @param df       dataframe containing the data to plot.
@@ -68,7 +68,7 @@ public class Plotter implements Serializable, Cloneable
     }
 
     /**
-     * Creates a line chart from the specified dataframe. Each column in the dataframe is plotted as a separate series
+     * Displays a line chart from the specified dataframe. Each column in the dataframe is plotted as a separate series
      * with the row indices used as the x-axis values.
      *
      * @param df The dataframe containing the data to plot. Each column is treated as a series, and the index values are
@@ -100,7 +100,7 @@ public class Plotter implements Serializable, Cloneable
     }
 
     /**
-     * Creates a line chart using the provided list of series.
+     * Displays a line chart using the provided list of series.
      *
      * @param series A variable-length array of series data to plot. Each series represents y-values.
      *               At least one series must be provided.
@@ -138,7 +138,7 @@ public class Plotter implements Serializable, Cloneable
     }
 
     /**
-     * Creates a scatter plot chart using the provided series data.
+     * Displays a scatter plot chart using the provided series data.
      *
      * @param xySeries A variable-length array of series data, where each pair of series represents
      *                 the x-axis and y-axis data for the scatter plot. Must be provided in pairs.
