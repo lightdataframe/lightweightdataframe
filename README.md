@@ -8,6 +8,7 @@ Supports the following operations:
 - Compute statistics
 - Sorting rows
 - Grouping rows
+- Filtering rows
 - Aggregating rows
 - Group-Aggregate rows
 - Plotting
