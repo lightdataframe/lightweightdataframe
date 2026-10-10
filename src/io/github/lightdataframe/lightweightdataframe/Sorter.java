@@ -1,8 +1,9 @@
 package io.github.lightdataframe.lightweightdataframe;
 
 
+import java.util.Arrays;
 import java.util.function.ToDoubleFunction;
-
+import java.util.stream.IntStream;
 
 
 /**
@@ -25,6 +26,27 @@ public class Sorter
             return df.getRow(n).get(column);
         };
     }
+
+    /**
+     * Score rows of a dataframe based on the values of the given columns
+     * @param columns ordered list of columns
+     * @return a row scorer that scores rows based on the column values in column order
+     */
+    public RowScorer sortByColumns(String ...columns)
+    {
+        return (df, n) ->
+        {
+            if(!df.getColumns().containsAll(Arrays.asList(columns)))
+                throw new IllegalArgumentException("One or more columns not found: [" + String.join(", ", Arrays.asList(columns)) + "] in [" + String.join(", ", df.getColumns()) + "]");
+            return IntStream.range(0, columns.length)
+                    .mapToDouble(i -> {
+                        double multiplier = Math.pow(1e4, columns.length - i);
+                        return df.getRow(n).get(columns[i]) * multiplier;
+                    })
+                    .reduce(0, Double::sum);
+        };
+    }
+
     /**
      * Score rows of a dataframe by the values of a specific column.
      *

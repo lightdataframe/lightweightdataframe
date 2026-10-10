@@ -2,6 +2,7 @@ package io.github.lightdataframe.lightweightdataframe;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Provides factory methods for {@link RowGrouper} instances
@@ -46,17 +47,66 @@ public class Grouper
     /**
      * Strategy to group rows based on sliding window strategy
      *
-     * @param window sliding window size
+     * @param step       step size
+     * @param windowSize sliding window size
      * @return a row grouper that groups rows based on a sliding window strategy
      */
-    public RowGrouper slidingWindow(int window)
+    public RowGrouper slidingWindow(int step, int windowSize)
     {
+        if(windowSize <= 0)
+            throw new IllegalArgumentException("windowSize must be greater than 0");
+        if(step <= 0)
+            throw new IllegalArgumentException("step must be greater than 0");
         return (df, n) ->
         {
             List<Object> groups = new ArrayList<>();
-            for (int i = n; i >= Math.max(n - window + 1, 0); i--)
-                groups.add(i);
+            for (int i = n; i >= Math.max(n - windowSize + 1, 0); i--)
+                if(i % step == 0)
+                    groups.add(i);
             return groups;
         };
     }
+
+    /**
+     * Strategy to group rows based on sliding window strategy
+     *
+     * @param windowSize sliding window size
+     * @return a row grouper that groups rows based on a sliding window strategy
+     */
+    public RowGrouper slidingWindow(int windowSize)
+    {
+        if(windowSize <= 0)
+            throw new IllegalArgumentException("windowSize must be greater than 0");
+        return (df, n) ->
+        {
+            List<Object> groups = new ArrayList<>();
+            for (int i = n; i >= Math.max(n - windowSize + 1, 0); i--)
+                    groups.add(i);
+            return groups;
+        };
+    }
+
+    /**
+     * Strategy to assign random groups to rows
+     * @param numGroups number of groups to assign the rows to
+     * @param numGroupsPerRow number of groups each row belongs to
+     * @return a row grouper that randomly groups rows
+     */
+    public RowGrouper random(int numGroups, int numGroupsPerRow)
+    {
+        return  (df, n) ->
+        {
+            int m = numGroupsPerRow;
+            List<Integer> groups = IntStream.range(0, numGroups).boxed().collect(Collectors.toList());
+            List<Object> sample = new ArrayList<>();
+            while(!groups.isEmpty() && m > 0)
+            {
+                int idx = (int) (groups.size() * Math.random());
+                sample.add(groups.remove(idx));
+                m--;
+            }
+            return sample;
+        };
+    }
+
 }

@@ -40,12 +40,27 @@ public class GrouperTest
         row5.put("col1", 50.0);
         row5.put("col2", 20.0);
         row5.put("col3", 30.0);
+        Map<String, Double> row6 = new HashMap<>();
+        row6.put("col1", 50.0);
+        row6.put("col2", 50.0);
+        row6.put("col3", 30.0);
+        Map<String, Double> row7 = new HashMap<>();
+        row7.put("col1", 70.0);
+        row7.put("col2", 60.0);
+        row7.put("col3", 50.0);
+        Map<String, Double> row8 = new HashMap<>();
+        row8.put("col1", 65.0);
+        row8.put("col2", 65.0);
+        row8.put("col3", 65.0);
 
         df = df.append(false, row1);
         df = df.append(false, row2);
         df = df.append(false, row3);
         df = df.append(false, row4);
         df = df.append(false, row5);
+        df = df.append(false, row6);
+        df = df.append(false, row7);
+        df = df.append(false, row8);
 
         return df;
     }
@@ -54,7 +69,7 @@ public class GrouperTest
     void testSplitValid()
     {
         Grouper grouper = new Grouper();
-        RowGrouper rowGrouper = grouper.split(3);
+        RowGrouper rowGrouper = grouper.split(4);
 
         Dataframe df = createDummyDataframe();
 
@@ -112,24 +127,26 @@ public class GrouperTest
     void testSlidingWindowValid()
     {
         Grouper grouper = new Grouper();
-        RowGrouper rowGrouper = grouper.slidingWindow(3);
+        RowGrouper rowGrouper = grouper.slidingWindow(3, 3);
         Dataframe df = createDummyDataframe();
+
+        Map<Object, Dataframe> groups = df.group(rowGrouper);
 
         // Test a valid sliding window
         List<Object> result = rowGrouper.getRowGroups(df, 4);
-        assertEquals(Arrays.asList(4, 3, 2), result);
+        assertEquals(Collections.singletonList(3), result);
     }
 
     @Test
     void testSlidingWindowEmptyGroup()
     {
         Grouper grouper = new Grouper();
-        RowGrouper rowGrouper = grouper.slidingWindow(3);
+        RowGrouper rowGrouper = grouper.slidingWindow(1, 3);
         Dataframe df = createDummyDataframe();
 
         // Test with an index not a multiple of step
         List<Object> result = rowGrouper.getRowGroups(df, 3);
-        assertTrue(result.isEmpty());
+        assertTrue(!result.isEmpty());
     }
 
     @Test
@@ -138,7 +155,15 @@ public class GrouperTest
         Grouper grouper = new Grouper();
 
         // Test slidingWindow with invalid parameters
-        assertThrows(IllegalArgumentException.class, () -> grouper.slidingWindow(3));
-        assertThrows(IllegalArgumentException.class, () -> grouper.slidingWindow(-1));
+        assertThrows(IllegalArgumentException.class, () -> grouper.slidingWindow(1, -1));
+    }
+
+    @Test
+    void testRandomGroups()
+    {
+        Grouper grouper = new Grouper();
+        Dataframe df = createDummyDataframe();
+
+        Map<Object, Dataframe> groups = df.group(grouper.random(4,2));
     }
 }

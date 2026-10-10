@@ -4,13 +4,95 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Defines serialization methods for {@link Dataframe} and {@link Series} objects.
  */
 public class Serializer
 {
+    /**
+     * Convert a dataframe into a comma-separated values (csv) string
+     * @param header whether the csv should include the header
+     * @param df the dataframe to convert
+     * @return the csv string
+     */
+    public String toCsv(boolean header, Dataframe df)
+    {
+        StringBuilder sb = new StringBuilder();
+
+        if(header)
+        {
+            df.getColumns().forEach(col -> sb.append(col).append(","));
+            sb.append("\n");
+        }
+        df.getRows().forEach(row -> {
+            for(String col : row.keySet())
+                sb.append(row.get(col)).append(",");
+            sb.append("\n");
+        });
+        return sb.toString();
+    }
+
+    /**
+     * Parses a comma-separated values (csv) string into a dataframe
+     * @param header whether the first line of the string is the csv header with column names
+     * @param csv the csv string to parse
+     * @return a new dataframe instance with the parsed values
+     */
+    public Dataframe fromCsv(boolean header,String csv)
+    {
+        Dataframe df = new Dataframe();
+        List<String> lines = Arrays.stream(csv.split("\n"))
+                .map(String::trim)
+                .map(l -> {
+                    if(l.endsWith(","))
+                        l = l.substring(0, l.length() - 1);
+                    return l;
+                })
+                .collect(Collectors.toList());
+
+        if(lines.isEmpty())
+            return df;
+
+        List<String> columns;
+        if(header)
+        {
+            columns = Arrays.stream(lines.get(0).split(","))
+                    .map(String::trim)
+                    .collect(Collectors.toList());
+            lines.remove(0);
+        }
+        else
+        {
+            String[] row = lines.get(0).split(",");
+            columns = IntStream.range(0, row.length)
+                    .mapToObj(String::valueOf)
+                    .collect(Collectors.toList());
+        }
+        for(String line : lines)
+        {
+            List<Double> row = Arrays.stream(line.split(","))
+                    .map(v -> Double.parseDouble(v.trim()))
+                    .collect(Collectors.toList());
+
+            if(row.size() != columns.size())
+                throw new RuntimeException("Wrong number of columns for row: " + line);
+
+            Map<String, Double> rowMap = IntStream.range(0, columns.size())
+                    .boxed()
+                    .collect(Collectors.toMap(
+                            columns::get,
+                            row::get,
+                            (a, b) -> a,
+                            LinkedHashMap::new
+                    ));
+            df.append(true, rowMap);
+        }
+        return df;
+    }
 
 
     /**

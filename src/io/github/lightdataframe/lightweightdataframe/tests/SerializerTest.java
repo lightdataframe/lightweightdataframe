@@ -40,6 +40,24 @@ class SerializerTest
         return new Series(Arrays.asList(1d, 2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d, 10d));
     }
 
+
+    @Test
+    void dataframeToCsv()
+    {
+        Dataframe df = createDataframe();
+        String csv = serializer.toCsv(true, df);
+        Dataframe df0 = serializer.fromCsv(true, csv);
+        assertEquals(df.getRows(), df0.getRows());
+    }
+
+    @Test
+    void singleRowToDataframe()
+    {
+        String csv = "1.2,3.6,4";
+        Dataframe df0 = serializer.fromCsv(false, csv);
+        assertEquals(1, df0.size());
+    }
+
     @Test
     void dataframeToJson()
     {

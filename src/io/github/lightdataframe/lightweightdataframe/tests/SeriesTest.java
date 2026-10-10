@@ -234,21 +234,26 @@ class SeriesTest
     @Test
     void statistics()
     {
-        Series series = new Series(Arrays.asList(3d, 2d, 1d, 4d));
+        Series series = new Series(Arrays.asList(3d, 2d, 1d, Double.NaN));
+
+        series.statistics();
+
+        Series series2 = new Series();
+        series2.statistics();
     }
 
     @Test
-    void plot()
+    void percentile()
     {
+        Series series = Series.from(3d, 2d, 1d, 0d,4, 5, 6, 7, 8, 9);
+        double percentile = series.percentile(4);
     }
 
     @Test
     void slidingWindow()
     {
-        Series s = Series.from();
-
-        double median = s.median();
-
+        Series s = Series.from(1,2,3,4);
+        s.slidingWindow(1, 10);
     }
 
     @Test

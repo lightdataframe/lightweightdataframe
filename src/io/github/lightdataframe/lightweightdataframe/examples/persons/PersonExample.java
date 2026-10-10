@@ -94,7 +94,7 @@ public class PersonExample
                 .addAggregation("min age", df0 -> df0.getColumn(AGE).min())
                 .addAggregation("max age", df0 -> df0.getColumn(AGE).max());
 
-
+        // Groups by age and applies the aggregator to each group
         Dataframe groupByAgeAggregated = df.groupAggregate(
                 grouper.groupByColumnValues(AGE),
                 aggregator

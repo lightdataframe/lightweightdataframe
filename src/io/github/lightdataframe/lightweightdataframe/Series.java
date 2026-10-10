@@ -126,7 +126,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
      * Converts elements that satisfy the predicate to 1.0 and those that do not to 0.0.
      *
      * @param test the predicate to evaluate each element in the series
-     * @return a new series where each value is the result of applying the predicate to the corresponding element
+     * @return a new series where each value is the result of applying the predicate to the corresponding element (1 or 0)
      */
     public Series test(Predicate<Double> test)
     {
@@ -153,6 +153,46 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     public boolean any(Predicate<Double> test)
     {
         return stream().anyMatch(test);
+    }
+
+    /**
+     * Returns the series without NaN value
+     * @return the series without NaN value
+     */
+    public Series withoutNan()
+    {
+        Series series = new Series();
+        for(Double v : this)
+            if(!Double.isNaN(v))
+                series.add(v);
+        return series;
+    }
+
+
+    public boolean add(Double value)
+    {
+        if(value == null)
+            value = Double.NaN;
+        return super.add(value);
+    }
+
+    public void add(int index, Double value)
+    {
+        if(value == null)
+            value = Double.NaN;
+        super.add(index, value);
+    }
+
+    public boolean addAll(Collection<? extends Double> c)
+    {
+        c = c.stream().map(v -> v == null ? Double.NaN : v).collect(Collectors.toList());
+        return super.addAll(c);
+    }
+
+    public boolean addAll(int index, Collection<? extends Double> c)
+    {
+        c = c.stream().map(v -> v == null ? Double.NaN : v).collect(Collectors.toList());
+        return super.addAll(index, c);
     }
 
     /**
@@ -394,7 +434,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     /**
      * Computes and returns the middle value of the series.
      * The middle value is determined by skipping half of the series' elements.
-     * If the series is empty or has nan values, {@code Double.NaN} is returned.
+     * If the series is empty {@code Double.NaN} is returned.
      *
      * @return the middle value of the series as a double, or {@code Double.NaN} if the series is empty or has nan values
      */
@@ -420,7 +460,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
      */
     public double last()
     {
-        return stream().skip(size() - 1).findFirst().orElse(Double.NaN);
+        return stream().skip(Math.max(0, size() - 1)).findFirst().orElse(Double.NaN);
     }
 
     /**
@@ -440,6 +480,23 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
         else
             return sorted.get(sorted.size() / 2);
 
+    }
+
+    /**
+     * Returns the percentile of a given value, or NaN if the series is empty
+     * @param value value to find the percentile of
+     * @return the percentile of a given value
+     */
+    public double percentile(double value)
+    {
+        if(isEmpty())
+            return Double.NaN;
+
+        double lesser = stream()
+                .mapToDouble(aDouble -> aDouble < value ? 1 : 0)
+                .sum();
+
+        return lesser / size();
     }
 
     /**
@@ -467,17 +524,17 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
         Map<String, Double> stats = new LinkedHashMap<>();
 
         stats.put("size", (double) size());
-        stats.put("average", average());
+        stats.put("avg", average());
         stats.put("std", std());
         stats.put("var", var());
         stats.put("min", min());
         stats.put("max", max());
+        stats.put("median", median());
         stats.put("first", first());
-        stats.put("median", middle());
+        stats.put("middle", middle());
         stats.put("last", last());
         stats.put("hasNan", hasNan() ? 1.0 : 0.0);
         return stats;
-
     }
 
     /**

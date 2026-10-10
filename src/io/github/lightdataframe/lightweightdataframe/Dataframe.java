@@ -182,12 +182,10 @@ public class Dataframe implements Serializable, Cloneable
 
 
     /**
-     * Retrieves the rows of the dataframe as a list of maps, where each map represents a row
-     * with column names as keys and their corresponding values as doubles.
+     * Returns an unmodifiable view of the dataframe as a list of maps where each map contains the column-value pairs for a row.
      * Rows keys are ordered by the column names in the dataframe.
-     * Modifications to the rows are not propagated to the Dataframe.
      *
-     * @return a list of unmodifiable maps, where each map contains the column-value pairs for a row.
+     * @return an unmodifiable view of the dataframe as a list of maps
      */
     public List<Map<String, Double>> getRows()
     {
@@ -244,15 +242,13 @@ public class Dataframe implements Serializable, Cloneable
         if(!data.isEmpty() && !row.keySet().containsAll(getColumns()))
             throw new IllegalArgumentException("Attempting to add a row with invalid columns");
 
-        Dataframe df;
-        if(inplace)
-            df = this;
-        else
-        {
-            df = new Dataframe();
-            df.data.addAll(data);
-        }
+        row = new LinkedHashMap<>(row);
+        for(String col : Collections.unmodifiableCollection(row.keySet()))
+            if(row.get(col) == null)
+                row.put(col, Double.NaN);
 
+
+        Dataframe df = inplace ? this : clone();
 
         LinkedHashMap<String, Double> newRow;
 
@@ -273,6 +269,48 @@ public class Dataframe implements Serializable, Cloneable
         return df;
     }
 
+    /**
+     * Removes a row from the dataframe
+     * @param inplace whether the operation is inplace
+     * @param n index of the row to remove
+     * @return a new dataframe instance or this instance depending on inplace parameter
+     * @throws IllegalArgumentException if n < 0 or > size()
+     */
+    public Dataframe remove(boolean inplace, int n)
+    {
+        if(n < 0 || n >= data.size())
+            throw new IllegalArgumentException("Index out of bounds");
+
+        Dataframe df = inplace ? this : clone();
+        df.data.remove(n);
+        return df;
+    }
+
+    /**
+     * Sets a cell value
+     * @param inplace wether the operation is inplace
+     * @param n row index
+     * @param column column to set
+     * @param value value to set
+     * @return a new dataframe instance or this instance depending on inplace parameter
+     * @throws IllegalArgumentException if n < 0 or n >= size()
+     * @throws IllegalArgumentException if column is not in the dataframe columns
+     */
+    public Dataframe set(boolean inplace, int n, String column, Double value)
+    {
+        if(n < 0 || n >= data.size())
+            throw new IllegalArgumentException("Index out of bounds");
+        if(!getColumns().contains(column))
+            throw new IllegalArgumentException("Column " + column + " not found");
+
+        Dataframe df = inplace ? this : clone();
+
+        if(value == null)
+            value = Double.NaN;
+
+        df.data.get(n).put(column, value);
+        return df;
+    }
 
     /**
      * Reorders the columns of the Dataframe based on the specified column order.
@@ -305,13 +343,33 @@ public class Dataframe implements Serializable, Cloneable
         return d;
     }
 
+    /**
+     * Finds the indices of rows matching the given values. All values must match for a row index to be returned
+     * @param values values to test the rows with
+     * @return indices of rows with the specified values
+     */
+    public List<Integer> findIndices(Map<String, Double> values)
+    {
+        if(!getColumns().containsAll(values.keySet()))
+            throw new IllegalArgumentException("One or more columns not found: [" + String.join(", ", values.keySet()) + "] in [" + String.join(", ", getColumns()) + "]");
+
+        return IntStream.range(0, size())
+                .filter(idx -> {
+                    Map<String, Double> row = getRow(idx);
+                    return values.keySet().stream().allMatch(col -> row.get(col).equals(values.get(col)));
+                })
+                .boxed()
+                .collect(Collectors.toList());
+
+    }
+
 
     /**
      * Computes a statistical summary for each column in the dataframe and returns them as a new dataframe.
      * Each row of the returned dataframe corresponds to one column of the original dataframe, with the metrics as columns.
      * The computed metrics are <br>
      * - size <br>
-     * - mean <br>
+     * - average <br>
      * - standard deviation<br>
      * - variance <br>
      * - minimum value<br>
@@ -320,7 +378,9 @@ public class Dataframe implements Serializable, Cloneable
      * - first element<br>
      * - middle element <br>
      * - last element<br>
-     * If the dataframe is empty all metrics are set to NaN.
+     * - has nan <br>
+     * If the dataframe is empty a single row is returned with all metrics are set to NaN. <br>
+     * For each column NaN values are first removed. As such, size indicates the number of non-NaN values<br>
      *
      * @return A new {@code Dataframe} containing the statistical metrics for each column. Each row of the new dataframe
      * represents one column of the original dataframe, with the metrics as columns. Rows order correspond to the
@@ -328,24 +388,20 @@ public class Dataframe implements Serializable, Cloneable
      */
     public Dataframe statistics()
     {
-        List<Map<String, Double>> rows = getColumns()
-                .stream()
-                .map(column ->
-                {
-                    Series columnSeries = getColumn(column);
-                    Map<String, Double> stats = new LinkedHashMap<>();
-                    stats.put("mean", columnSeries.average());
-                    stats.put("std", columnSeries.std());
-                    stats.put("var", columnSeries.var());
-                    stats.put("min", columnSeries.min());
-                    stats.put("max", columnSeries.max());
-                    stats.put("median", columnSeries.median());
-                    stats.put("first", columnSeries.first());
-                    stats.put("middle", columnSeries.middle());
-                    stats.put("last", columnSeries.last());
-                    return stats;
-                })
-                .collect(Collectors.toList());
+        List<Map<String, Double>> rows;
+        if(!data.isEmpty())
+        {
+            rows = getColumns()
+                    .stream()
+                    .map(column -> getColumn(column).withoutNan().statistics())
+                    .collect(Collectors.toList());
+        }
+        else
+        {
+            rows = new ArrayList<>();
+            Series s = new Series();
+            rows.add(s.statistics());
+        }
 
         Dataframe df = new Dataframe();
         df.data = rows;
@@ -445,6 +501,7 @@ public class Dataframe implements Serializable, Cloneable
      * Returns a deep copy of the dataframe
      * @return a deep copy of the dataframe
      */
+    @Override
     public Dataframe clone()
     {
         Dataframe df = new Dataframe();
@@ -614,7 +671,12 @@ public class Dataframe implements Serializable, Cloneable
          */
         public Collector<T> addColumn(String columnName, Function<T, Number> columnGetter)
         {
-            functions.put(columnName, x -> columnGetter.apply(x).doubleValue());
+            functions.put(columnName, x -> {
+                Number v = columnGetter.apply(x);
+                if(v == null)
+                    v = Double.NaN;
+                return v.doubleValue();
+            });
             return this;
         }
 

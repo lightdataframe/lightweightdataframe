@@ -13,7 +13,8 @@ public interface RowGrouper extends Serializable
      *
      * @param df the dataframe to group the rows from
      * @param n  the index of the row to group
-     * @return a list of objects representing the groups of rows
+     * @return a list of objects representing the groups of rows. The method {@code equal()} determines
+     * groups equality
      */
     List<Object> getRowGroups(Dataframe df, int n);
 }
