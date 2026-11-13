@@ -28,6 +28,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     {
         if(list == null)
             throw new IllegalArgumentException("list is null");
+
         addAll(list);
     }
 
