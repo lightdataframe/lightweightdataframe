@@ -4,46 +4,57 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Defines serialization methods for {@link Dataframe} and {@link Series} objects.
+ * Defines serialization methods for {@link Dataframe} and {@link Series} from/to JSON and CSV formats.
  */
 public class Serializer
 {
     /**
-     * Convert a dataframe into a comma-separated values (csv) string
+     * Convert a dataframe into a comma-separated values (csv) string.
+     *
      * @param header whether the csv should include the header
      * @param df the dataframe to convert
      * @return the csv string
      */
-    public String toCsv(boolean header, Dataframe df)
+    public static String toCsv(boolean header, Dataframe df)
     {
+        if(df == null)
+            throw new IllegalArgumentException("df is null");
+
         StringBuilder sb = new StringBuilder();
 
         if(header)
         {
             df.getColumns().forEach(col -> sb.append(col).append(","));
+            if(!df.getColumns().isEmpty())
+                sb.replace(sb.length() - 1, sb.length(), "");
             sb.append("\n");
         }
         df.getRows().forEach(row -> {
             for(String col : row.keySet())
                 sb.append(row.get(col)).append(",");
+            if(!df.getColumns().isEmpty())
+                sb.replace(sb.length() - 1, sb.length(), "");
             sb.append("\n");
         });
         return sb.toString();
     }
 
     /**
-     * Parses a comma-separated values (csv) string into a dataframe
+     * Parses a comma-separated values (csv) string into a dataframe.
+     *
      * @param header whether the first line of the string is the csv header with column names
      * @param csv the csv string to parse
      * @return a new dataframe instance with the parsed values
      */
-    public Dataframe fromCsv(boolean header,String csv)
+    public static Dataframe fromCsv(boolean header, String csv)
     {
+        if(csv == null)
+            throw new IllegalArgumentException("csv is null");
+
         Dataframe df = new Dataframe();
         List<String> lines = Arrays.stream(csv.split("\n"))
                 .map(String::trim)
@@ -75,7 +86,11 @@ public class Serializer
         for(String line : lines)
         {
             List<Double> row = Arrays.stream(line.split(","))
-                    .map(v -> Double.parseDouble(v.trim()))
+                    .map(v -> {
+                        if(v.trim().equals("null"))
+                            return Double.NaN;
+                        return Double.parseDouble(v.trim());
+                    })
                     .collect(Collectors.toList());
 
             if(row.size() != columns.size())
@@ -96,45 +111,49 @@ public class Serializer
 
 
     /**
-     * Converts the given {@link Dataframe} into a JSON string representation based on the specified format.
+     * Converts the given dataframe into a JSON string representation based on the specified format.
      *
      * @param format the {@link JsonFormat} that defines how the JSON string should be structured.
-     *               Supported formats include ROWS, COLUMNS, and COLUMNS_ROWS.
+     *               Supported formats include ROWS, COLUMNS, and COLUMNS_ROWS. See {@link JsonFormat} for details
      * @param df the {@link Dataframe} to be converted into a JSON string.
      * @return the JSON string representation of the given dataframe in the specified format.
-     * @throws IllegalArgumentException if the provided format is not valid.
      */
-    public String toJson(JsonFormat format, Dataframe df)
+    public static String toJson(JsonFormat format, Dataframe df)
     {
+        if(format == null)
+            throw new IllegalArgumentException("format is null");
+        if(df == null)
+            throw new IllegalArgumentException("df is null");
+
         switch (format)
         {
             case ROWS:
-                return onlyRowsJson(df);
+                return rowsJson(df);
             case COLUMNS_ROWS:
                 return columnsRowsJson(df);
             case COLUMNS:
                 return columnsJson(df);
             default:
-                throw new IllegalArgumentException("Invalid JsonFormat");
+                throw new IllegalArgumentException("invalid format");
         }
     }
 
-    private String columnsJson(Dataframe df)
+    private static String columnsJson(Dataframe df)
     {
         return df.getColumns().stream()
                 .map(col -> String.format(Locale.US, "\"%s\": %s", col, toJson(df.getColumn(col))))
                 .collect(Collectors.joining(", ", "{", "}"));
     }
 
-    private String columnsRowsJson(Dataframe df)
+    private static String columnsRowsJson(Dataframe df)
     {
         return "{" +
                 "\"columns\": " + df.getColumns().stream().map(col -> "\"" + col + "\"").collect(Collectors.joining(", ", "[", "],")) +
-                "\"rows\": " + onlyRowsJson(df) +
+                "\"rows\": " + rowsJson(df) +
                 "}";
     }
 
-    private String onlyRowsJson(Dataframe df)
+    private static String rowsJson(Dataframe df)
     {
         return df.data.stream().map(Serializer::rowToJson).collect(Collectors.joining(",", "[", "]"));
     }
@@ -148,7 +167,7 @@ public class Serializer
 
 
     /**
-     * Parses a JSON string representation into a {@link Dataframe} based on the specified format.
+     * Parses a JSON string representation into a dataframe based on the specified format.
      *
      * @param format the {@link JsonFormat} that determines how the JSON string should be interpreted.
      *               Supported formats include ROWS, COLUMNS, and COLUMNS_ROWS.
@@ -156,8 +175,13 @@ public class Serializer
      * @return a {@link Dataframe} created from the provided JSON string.
      * @throws IllegalArgumentException if the provided format is not valid.
      */
-    public Dataframe fromJson(JsonFormat format, String json)
+    public static Dataframe fromJson(JsonFormat format, String json)
     {
+        if(format == null)
+            throw new IllegalArgumentException("format is null");
+        if(json == null)
+            throw new IllegalArgumentException("json is null");
+
         switch (format)
         {
             case ROWS:
@@ -171,7 +195,7 @@ public class Serializer
         }
     }
 
-    private Dataframe fromJsonRows(String json)
+    private static Dataframe fromJsonRows(String json)
     {
         List<Map<String, Double>> rows = new ArrayList<>();
         try
@@ -183,7 +207,10 @@ public class Serializer
                 JSONObject jobj = jarr.getJSONObject(i);
                 List<String> sortedKeys = jobj.keySet().stream().sorted().collect(Collectors.toList());
                 for(String key : sortedKeys)
-                    row.put(key, jobj.getDouble(key));
+                {
+                    double v = jobj.isNull(key) ? Double.NaN : jobj.getDouble(key);
+                    row.put(key, v);
+                }
                 rows.add(row);
             }
         }
@@ -191,12 +218,14 @@ public class Serializer
         {
             throw new IllegalArgumentException("Invalid Json");
         }
+
         Dataframe df = new Dataframe();
-        df.data = rows;
+        for(Map<String, Double> row : rows)
+            df.append(true, row);
         return df;
     }
 
-    private Dataframe fromJsonColumns(String json)
+    private static Dataframe fromJsonColumns(String json)
     {
         Map<String, List<Double>> parsed = new LinkedHashMap<>();
         try
@@ -209,19 +238,22 @@ public class Serializer
                 JSONArray jarr = jobj.getJSONArray(key);
                 List<Double> columnValues = new ArrayList<>();
                 for(int i = 0; i < jarr.length(); i++)
-                    columnValues.add(jarr.getDouble(i));
+                {
+                    double v = jarr.isNull(i) ? Double.NaN : jarr.getDouble(i);
+                    columnValues.add(v);
+                }
                 parsed.put(key, columnValues);
             }
         }
         catch (Exception e)
         {
-            throw new IllegalArgumentException("Invalid Json");
+            throw new IllegalArgumentException("invalid json");
         }
 
         boolean sizes = parsed.values().stream().mapToInt(List::size).distinct().count() > 1;
 
         if(sizes)
-            throw new IllegalArgumentException("Columns have different sizes");
+            throw new IllegalArgumentException("columns have different sizes");
 
         List<Map<String, Double>> rows = new ArrayList<>();
         int length = parsed.values().stream().findFirst().map(List::size).orElse(0);
@@ -234,11 +266,12 @@ public class Serializer
             rows.add(row);
         }
         Dataframe df = new Dataframe();
-        df.data = rows;
+        for(Map<String, Double> row : rows)
+            df.append(true, row);
         return df;
     }
 
-    private Dataframe fromJsonColumnsRows(String json)
+    private static Dataframe fromJsonColumnsRows(String json)
     {
         JSONObject jobj = new JSONObject(json);
         List<String> columns = new ArrayList<>();
@@ -247,8 +280,8 @@ public class Serializer
 
         Dataframe df = fromJsonRows(jobj.getJSONArray("rows").toString());
 
-        if(!df.getColumns().containsAll(columns) && !columns.containsAll(df.getColumns()))
-            System.err.println("Mismatch between columns and rows");
+        if(!df.getColumns().equals(columns))
+            throw new IllegalStateException("mismatch between columns and rows. Columns: [" + String.join(", ", columns)+"]. Rows: [" + String.join(", ", df.getColumns()) +"]");
 
         return df;
     }
@@ -260,13 +293,16 @@ public class Serializer
 
 
     /**
-     * Converts the given {@link Series} into a JSON string representation.
+     * Converts the given series into a JSON array string representation.
      *
      * @param series the {@link Series} to be converted into a JSON string
      * @return a JSON string representation of the given series
      */
-    public String toJson(Series series)
+    public static String toJson(Series series)
     {
+        if(series == null)
+            throw new IllegalArgumentException("series is null");
+
         return "[" +
                 series. stream().map(v -> String.format(Locale.US, "%s", v)).collect(Collectors.joining(",")) +
                 "]";
@@ -281,15 +317,21 @@ public class Serializer
      * @return a {@link Series} object created from the numeric values in the provided JSON string.
      * @throws IllegalArgumentException if the input JSON string is invalid or cannot be parsed.
      */
-    public Series fromJson(String json)
+    public static Series fromJson(String json)
     {
+        if(json == null)
+            throw new IllegalArgumentException("json is null");
+
         try
         {
             Series series = new Series();
             JSONArray jarr = new JSONArray(json);
 
             for(int i = 0; i < jarr.length(); i++)
-                series.add(jarr.getDouble(i));
+            {
+                double v = jarr.isNull(i) ? Double.NaN : jarr.getDouble(i);
+                series.add(v);
+            }
             return series;
         }
         catch (Exception e)
@@ -297,6 +339,4 @@ public class Serializer
             throw new IllegalArgumentException("Invalid Json");
         }
     }
-
-
 }

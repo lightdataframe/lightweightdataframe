@@ -12,6 +12,7 @@ Supports the following operations:
 - Aggregating rows
 - Group-Aggregate rows
 - Plotting
+- CSV serialization
 - JSON serialization
 
 
@@ -56,31 +57,25 @@ Dataframe df = people.stream()
 
 // ---- Sorting ----
 
-Sorter sorter = new Sorter();
+Dataframe sortedDataframe = df.sort(true, Sorter.sortByColumn(AGE, age -> age));
 
-Dataframe sortedDataframe = df.sort( true, sorter.sortByColumn(AGE, age -> age));
-
-Dataframe shuffledDataframe = df.sort( true, sorter.shuffle());
+Dataframe shuffledDataframe = df.sort(true, Sorter.shuffle());
 
 
 // ---- Grouping ----
 
-Grouper grouper = new Grouper();
+Map<Object, Dataframe> groupedByAge = df.group(Grouper.groupByColumnValues(AGE));
 
-Map<Object, Dataframe> groupedByAge = df.group(grouper.groupByColumnValues(AGE));
-
-Map<Object, Dataframe> splits = df.group(grouper.split(3));
+Map<Object, Dataframe> splits = df.group(Grouper.split(3));
 
 
 // ---- Filtering ----
 
-Filter filter = new Filter();
+Dataframe head = df.filter(Filter.head(2));
+Dataframe between = df.filter(Filter.between(3, 4));
+Dataframe tail = df.filter(Filter.tail(2));
 
-Dataframe head = df.filter(filter.head(2));
-Dataframe between = df.filter(filter.between(3, 4));
-Dataframe tail = df.filter(filter.tail(2));
-
-Dataframe filteredByAge = df.filter(filter.rowTest(row -> row.get(AGE) >= 30));
+Dataframe filteredByAge = df.filter(Filter.rowTest(row -> row.get(AGE) >= 30));
 
 
 // ---- Aggregation ----
@@ -94,28 +89,29 @@ Aggregator aggregator = new Aggregator()
         .addAggregation("min age", df0 -> df0.getColumn(AGE).min())
         .addAggregation("max age", df0 -> df0.getColumn(AGE).max());
 
-
+// Groups by age and applies the aggregator to each group
 Dataframe groupByAgeAggregated = df.groupAggregate(
-        grouper.groupByColumnValues(AGE),
+        Grouper.groupByColumnValues(AGE),
         aggregator
 );
 
 
 // ---- Plotting ----
 
-Plotter plotter = new Plotter();
-
-        plotter.line(groupByAgeAggregated);
+Plotter.line(groupByAgeAggregated);
 
 
+// ---- CSV Serialization ----
+
+String csv = Serializer.toCsv(true, df);
+
+Dataframe fromCsv = Serializer.fromCsv(true, csv);
 
 // ---- JSON Serialization ----
 
-Serializer serializer = new Serializer();
+String json = Serializer.toJson(JsonFormat.COLUMNS_ROWS, df);
 
-String json = serializer.toJson(JsonFormat.COLUMNS_ROWS, df);
-
-Dataframe reconstructed = serializer.fromJson(JsonFormat.COLUMNS_ROWS, json);
+Dataframe reconstructed = Serializer.fromJson(JsonFormat.COLUMNS_ROWS, json);
 ```
 
 

@@ -1,80 +1,98 @@
 package io.github.lightdataframe.lightweightdataframe.tests;
 
-import io.github.lightdataframe.lightweightdataframe.Dataframe;
-import io.github.lightdataframe.lightweightdataframe.Sorter;
+import io.github.lightdataframe.lightweightdataframe.*;
 import org.junit.jupiter.api.Test;
 
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.stream.Collectors;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class DataframeTest
 {
-    private Dataframe createDataframe()
+    @Test
+    public void testClone()
     {
-
-        Map<String, Double> row1 = new LinkedHashMap<>();
-        row1.put("col1", 1d);
-        row1.put("col2", null);
-        Map<String, Double> row2 = new LinkedHashMap<>();
-        row2.put("col1", 2d);
-        row2.put("col2", 25.0);
-        Map<String, Double> row3 = new LinkedHashMap<>();
-        row3.put("col1", 3d);
-        row3.put("col2", 30.0);
-        Map<String, Double> row4 = new LinkedHashMap<>();
-        row4.put("col1", 3d);
-        row4.put("col2", 10.0);
-        Map<String, Double> row5 = new LinkedHashMap<>();
-        row5.put("col1", 5d);
-        row5.put("col2", 30.0);
-        Map<String, Double> row6 = new LinkedHashMap<>();
-        row6.put("col1", 5d);
-        row6.put("col2", 20.0);
-        Map<String, Double> row7 = new LinkedHashMap<>();
-        row7.put("col1", 7d);
-        row7.put("col2", 20.0);
-        Map<String, Double> row8 = new LinkedHashMap<>();
-        row8.put("col1", 7d);
-        row8.put("col2", null);
+        Dataframe df = TestUtil.randomDataframe(1000);
+        assertEquals(df.getRows(), df.clone().getRows());
+    }
 
 
-        Dataframe df = new Dataframe();
-        df.append(true, row1);
-        df.append(true, row2);
-        df.append(true, row3);
-        df.append(true, row4);
-        df.append(true, row5);
-        df.append(true, row6);
-        df.append(true, row7);
-        df.append(true, row8);
-        return df;
+    @Test
+    public void testAggregation()
+    {
+        Dataframe df = TestUtil.randomDataframe(1000);
+        df = df.sort(true, Sorter.sortByColumns("col0"));
+        df = df.groupAggregate(Grouper.slidingWindow(1, 3), new Aggregator()
+                .addAggregation("col0_avg", df0 -> df0.getColumn("col0").average())
+                .addAggregation("col1_avg", df1 -> df1.getColumn("col1").average())
+        );
+        assertEquals(1000, df.size());
+        df.print();
+    }
+
+
+    @Test
+    public void replaceTest()
+    {
+        Dataframe df = TestUtil.randomDataframe(100);
+
+        df.replace(true, 0d, v -> Double.isNaN(v));
+
+        assertEquals(0, df.find(Filter.filterByRow(row -> row.toSeries().hasNan())).size());
+
+        df.replace(true, 0d, v -> Math.abs(v) > 40);
+
+        df.sort(true, Sorter.sortByColumns("col1")).print();
     }
 
     @Test
-    void nullValuesTest()
+    public void replaceColumnTest()
     {
-        Dataframe df = createDataframe();
+        Dataframe df = TestUtil.randomDataframe(100);
+
+        df.replace(true, "col2", 0d, v -> Double.isNaN(v));
+
+        assertEquals(0, df.find(Filter.filterByRow(row -> Double.isNaN(row.get("col2")))).size());
+
+        df.replace(true, "col2", 0d, v -> Math.abs(v) > 40);
+        df.sort(true, Sorter.sortByColumns("col2")).print();
+    }
+
+    @Test
+    public void nullValuesTest()
+    {
+        Dataframe df = TestUtil.randomDataframe(1000);
 
         df.set(true, 0, "col1", null);
         df.print();
     }
 
     @Test
-    void testReorderColumns()
+    public void testReorderColumns()
     {
-        Dataframe df = createDataframe();
+        Dataframe df = TestUtil.randomDataframe(1000);
         Dataframe reordered = df.reorderColumns("col2", "col1");
         reordered.printStatistics();
+    }
 
-        df.sort(true, new Sorter().sortByColumns("col1", "col2")).print();
 
+    @Test
+    public void testRenameColumns()
+    {
+        Dataframe df = TestUtil.randomDataframe(1000);
+        Dataframe reordered = df.renameColumn("col0", "renamed");
+        reordered.print();
+        assertEquals("renamed", reordered.getColumns().get(0));
     }
 
     @Test
-    void statisticsTest()
+    public void statisticsTest()
     {
-        Dataframe df = createDataframe();
+        Dataframe df = TestUtil.randomDataframe(1000);
+
+        Dataframe stats = df.statistics();
+        assertEquals(stats.size(), df.getColumns().size());
 
         df.printStatistics();
 
@@ -83,9 +101,9 @@ public class DataframeTest
     }
 
     @Test
-    void testAddColumn()
+    public void testAddColumn()
     {
-        Dataframe df = createDataframe();
+        Dataframe df = TestUtil.randomDataframe(1000);
 
         df = df.setColumn("newcol", df.getColumn("col1").zip(df.getColumn("col2"), Double::compareTo));
     }

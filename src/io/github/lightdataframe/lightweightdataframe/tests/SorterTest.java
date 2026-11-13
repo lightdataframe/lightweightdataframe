@@ -4,51 +4,48 @@ import io.github.lightdataframe.lightweightdataframe.Dataframe;
 import io.github.lightdataframe.lightweightdataframe.Sorter;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
-import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 
 
 public class SorterTest
 {
-    Dataframe dummyDataframe()
-    {
-        Dataframe df = new Dataframe();
-        Map<String, Double> row1 = new HashMap<>();
-        row1.put("col1", 10.0);
-        row1.put("col2", 20.0);
-        Map<String, Double> row2 = new HashMap<>();
-        row2.put("col1", 15.0);
-        row2.put("col2", 25.0);
-        Map<String, Double> row3 = new HashMap<>();
-        row3.put("col1", 20.0);
-        row3.put("col2", 30.0);
-        df.append(true, row1);
-        df.append(true, row2);
-        df.append(true, row3);
-        return df;
-    }
-
-    Sorter sorter = new Sorter();
-
     @Test
     public void shuffleTest()
     {
-        Dataframe df = dummyDataframe();
+        Dataframe df = TestUtil.randomDataframe(1000);
 
-        df = df.sort(true, sorter.shuffle());
+        Dataframe sorted = df.sort(true, Sorter.shuffle());
 
-        assertEquals(3, df.size());
-
+        assertNotEquals(df, sorted);
     }
 
     @Test
-    public void sortByColumnTest()
+    public void sortByNanColumn()
     {
-        Dataframe df0 = dummyDataframe();
-        Dataframe df1 = df0.sort(false, sorter.sortByColumn("col1"));
+        Dataframe df0 = TestUtil.randomDataframe(1000);
+        Dataframe df1 = df0.sort(true, Sorter.sortByColumns("col3")); // Column of all NaN values
+        assertEquals(df0, df1); // The dataframe is not sorted
+        df1.print();
     }
 
+    @Test
+    public void sortByColumnsTest()
+    {
+        Dataframe df0 = TestUtil.randomDataframe(1000);
+        Dataframe df1 = df0.sort(true, Sorter.sortByColumns());
+        assertEquals(df0, df1); // The dataframe is not sorted
 
+        Dataframe df2 = df0.sort(false, Sorter.sortByColumns("col5", "col2"));
+        df2.print();
+    }
+
+    @Test
+    public void sortByRowsTest()
+    {
+        Dataframe df0 = TestUtil.randomDataframe(1000);
+        Dataframe df1 = df0.sort(true, Sorter.sortByRow(row -> row.get("col0")));
+        df0.print();
+        df1.print();
+    }
 }

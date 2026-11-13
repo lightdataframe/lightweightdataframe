@@ -56,7 +56,7 @@ public class HotelExample
         df.print();
 
         df = df.groupAggregate(
-                        new Grouper().groupByColumnValues(ROOM_TYPE),
+                        Grouper.groupByColumnValues(ROOM_TYPE),
                         new Aggregator()
                                 .addAggregation(AVERAGE_CAPACITY, df0 -> df0.getColumn(CAPACITY).average())
                                 .addAggregation(AVERAGE_PRICE_PER_NIGHT, df0 -> df0.getColumn(PRICE_PER_NIGHT).average())
@@ -64,16 +64,15 @@ public class HotelExample
                 )
                 .replaceColumn(AVERAGE_PRICE_PER_NIGHT, Series::normalized)
                 .replaceColumn(AVERAGE_CAPACITY, Series::normalized)
-                .sort(true, new Sorter().sortByColumn(ROOM_TYPE, v -> v));
+                .sort(true, Sorter.sortByRow(v -> v.get(ROOM_TYPE)));
 
-        Plotter plotter = new Plotter();
 
-        plotter.line(
+        Plotter.line(
                 df.getColumn(AVERAGE_PRICE_PER_NIGHT),
                 df.getColumn(AVERAGE_CAPACITY)
         );
 
-        plotter.scatter(
+        Plotter.scatter(
                 df.getColumn(AVERAGE_PRICE_PER_NIGHT), df.getColumn(AVERAGE_CAPACITY)
         );
 

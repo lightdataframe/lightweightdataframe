@@ -15,26 +15,32 @@ import java.util.stream.IntStream;
 /**
  * Provides basic plotting methods for {@link Dataframe} and {@link Series}.
  */
-public class Plotter implements Serializable, Cloneable
+public class Plotter
 {
-
     /**
      * Displays a chart of the given dataframe using the specified column as the x-axis and one or more columns as the y-axis.
-     * By default, if no y-axis columns are specified, all columns except the x-axis column will be plotted.
+     * If no y-axis columns are specified, all columns except the x-axis column are plotted.
      *
-     * @param df       dataframe containing the data to plot.
-     * @param xColumn  The name of the column to use as the x-axis. Must exist in the Dataframe.
-     * @param yColumns The names of the columns to use as the y-axis. If no columns are specified, all columns except the x-axis column are used.
-     *                 Each column specified must exist in the Dataframe.
-     * @throws IllegalArgumentException If the x-axis column does not exist in the Dataframe or if one or more of
-     *                                  the specified y-axis columns do not exist in the Dataframe.
+     * @param df       dataframe containing the data to plot
+     * @param xColumn  The name of the column to use as the x-axis. Must exist in the dataframe
+     * @param yColumns The names of the columns to use as the y-axis. If no columns are specified, all columns except the x-axis column are used
+     *                 Each column specified must exist in the dataframe
+     * @throws IllegalArgumentException If the x-axis column does not exist in the dataframe or if one or more of
+     *                                  the specified y-axis columns do not exist in the dataframe
      */
-    public void line(Dataframe df, String xColumn, String... yColumns)
+    public static void line(Dataframe df, String xColumn, String... yColumns)
     {
+        if(df == null)
+            throw new IllegalArgumentException("df is null");
+        if(xColumn == null)
+            throw new IllegalArgumentException("x column is null");
+        for(String column : yColumns)
+            if(column == null)
+                throw new IllegalArgumentException("y column is null");
         if (!df.getColumns().contains(xColumn))
-            throw new IllegalArgumentException("Column " + xColumn + " not found");
+            throw new IllegalArgumentException("x column " + xColumn + " not found");
         if (yColumns.length > 0 && !df.getColumns().containsAll(Arrays.asList(yColumns)))
-            throw new IllegalArgumentException("One or more columns not found: [" + Arrays.toString(yColumns) + "] in [" + df.getColumns() + "]");
+            throw new IllegalArgumentException("one or more y columns not found: [" + String.join(", ", yColumns) + "] in [" + String.join(", ", df.getColumns()) + "]");
 
 
         XYChart chart = new XYChartBuilder()
@@ -74,8 +80,11 @@ public class Plotter implements Serializable, Cloneable
      * @param df The dataframe containing the data to plot. Each column is treated as a series, and the index values are
      *           automatically used as the x-axis.
      */
-    public void line(Dataframe df)
+    public static void line(Dataframe df)
     {
+        if(df == null)
+            throw new IllegalArgumentException("df is null");
+
         XYChart chart = new XYChartBuilder()
                 .width(600)
                 .height(500)
@@ -103,13 +112,12 @@ public class Plotter implements Serializable, Cloneable
      * Displays a line chart using the provided list of series.
      *
      * @param series A variable-length array of series data to plot. Each series represents y-values.
-     *               At least one series must be provided.
-     * @throws IllegalArgumentException If no series are provided.
      */
-    public void line(Series ... series)
+    public static void line(Series ... series)
     {
-        if(series.length == 0)
-            throw new IllegalArgumentException("series must have at least one element");
+        for(Series s : series)
+            if(s == null)
+                throw new IllegalArgumentException("series is null");
 
         XYChart chart = new XYChartBuilder()
                 .width(600)
@@ -142,19 +150,21 @@ public class Plotter implements Serializable, Cloneable
      *
      * @param xySeries A variable-length array of series data, where each pair of series represents
      *                 the x-axis and y-axis data for the scatter plot. Must be provided in pairs.
-     *                 All series must have the same size.
+     *                 All series must have the same size
      * @throws IllegalArgumentException If no series are provided, if the number of series is not even,
-     *                                  or if the sizes of the series are not identical.
+     *                                  or if the sizes of the series are not identical
      */
-    public void scatter(Series ... xySeries)
+    public static void scatter(Series ... xySeries)
     {
+        for(Series s : xySeries)
+            if(s == null)
+                throw new IllegalArgumentException("xySeries is null");
         if(xySeries.length == 0)
             throw new IllegalArgumentException("xySeries must have at least two elements");
         if(xySeries.length % 2 != 0)
             throw new IllegalArgumentException("xySeries must have an even number of elements");
         if (Arrays.stream(xySeries).map(Series::size).distinct().count() != 1)
             throw new IllegalArgumentException("xySeries must have the same size");
-
 
 
         XYChart chart = new XYChartBuilder()
@@ -179,16 +189,5 @@ public class Plotter implements Serializable, Cloneable
         }
 
         new SwingWrapper(chart).displayChart();
-    }
-
-    /**
-     * Returns a new instance of the plotter
-     *
-     * @return a new instance of the plotter
-     */
-    @Override
-    protected Plotter clone() throws CloneNotSupportedException
-    {
-        return new Plotter();
     }
 }

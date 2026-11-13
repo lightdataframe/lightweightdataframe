@@ -1,17 +1,14 @@
 package io.github.lightdataframe.lightweightdataframe;
 
 
-import java.io.Serializable;
-
-
 /**
- * Strategy interface for filtering rows in a dataframe.
+ * Strategy for filtering rows in a dataframe
  */
-public interface RowFilter extends Serializable
+public interface RowFilter
 {
     /**
-     * Tests a specific row in the given dataframe to determine if it meets
-     * certain conditions.
+     * Tests a row in the given dataframe to determine if it meets
+     * some conditions.
      *
      * @param df the dataframe containing the data to be tested
      * @param n the index of the row to test

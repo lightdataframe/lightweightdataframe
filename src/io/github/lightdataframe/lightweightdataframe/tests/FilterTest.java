@@ -10,57 +10,39 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class FilterTest
 {
-    Filter filter = new Filter();
-
-    Dataframe dummyDataframe()
-    {
-        Dataframe df = new Dataframe();
-        Map<String, Double> row1 = new HashMap<>();
-        row1.put("col1", 10.0);
-        row1.put("col2", 20.0);
-        Map<String, Double> row2 = new HashMap<>();
-        row2.put("col1", 15.0);
-        row2.put("col2", 25.0);
-        Map<String, Double> row3 = new HashMap<>();
-        row3.put("col1", 20.0);
-        row3.put("col2", 30.0);
-        df.append(true, row1);
-        df.append(true, row2);
-        df.append(true, row3);
-        return df;
-    }
 
     @Test
     public void testHead()
     {
-        Dataframe df = dummyDataframe();
-        Dataframe df0 = df.filter(filter.head(2));
+        Dataframe df = TestUtil.randomDataframe(1000);
+        Dataframe df0 = df.filter(Filter.head(2));
+        assertEquals(2, df0.size());
     }
 
     @Test
     public void testTail()
     {
-        Dataframe df = dummyDataframe();
+        Dataframe df = TestUtil.randomDataframe(1000);
 
-        Dataframe df0 = df.filter(filter.tail(2));
+        Dataframe df0 = df.filter(Filter.tail(2));
         assertEquals(2, df0.size());
     }
 
     @Test
     public void testBetween()
     {
-        Dataframe df = dummyDataframe();
+        Dataframe df = TestUtil.randomDataframe(1000);
 
-        Dataframe df0 = df.filter(filter.between(1, 2));
+        Dataframe df0 = df.filter(Filter.between(1, 2));
         assertEquals(1, df0.size());
     }
 
     @Test
     public void testRowTest()
     {
-        Dataframe df = dummyDataframe();
+        Dataframe df = TestUtil.randomDataframe(1000);
 
-        Dataframe df0 = df.filter(filter.rowTest(row -> row.get("col1") == 10.0));
-        assertEquals(1, df0.size());
+        Dataframe df0 = df.filter(Filter.filterByRow(row -> Double.isNaN(row.get("col1"))));
+        assertTrue(df0.getColumn("col1").all(v -> Double.isNaN(v)));
     }
 }

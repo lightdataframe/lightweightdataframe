@@ -21,8 +21,7 @@ public class GaussianExample
 
         Series cumfun = gaussian.cumsum();
 
-        Plotter plotter = new Plotter();
-        plotter.line(x.normalized(), gaussian.normalized(), cumfun);
+        Plotter.line(x.normalized(), gaussian.normalized(), cumfun);
 
     }
 }

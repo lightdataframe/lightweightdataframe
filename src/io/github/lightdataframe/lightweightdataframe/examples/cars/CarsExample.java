@@ -7,11 +7,6 @@ import java.util.*;
 
 public class CarsExample
 {
-    static Sorter sorter = new Sorter();
-    static Grouper grouper = new Grouper();
-    static Filter filter = new Filter();
-
-
     public static void main(String[] args)
     {
 
@@ -55,27 +50,23 @@ public class CarsExample
 
         df.print();
 
-        Filter filter = new Filter();
 
-        Dataframe df0 = df.filter(filter.between(0, 1));
-        df0 = df.filter(filter.head(5));
-        df0 = df.filter(filter.tail(5));
-        df0 = df.filter(filter.valueTest("price", v -> v > 70000));
-        df0 = df.filter(filter.valuesMatch(row));
+        Dataframe df0 = df.filter(Filter.between(0, 1));
+        df0 = df.filter(Filter.head(5));
+        df0 = df.filter(Filter.tail(5));
+        df0 = df.filter(Filter.filterByRow(r -> r.get("price") > 70000));
+        df0 = df.filter(Filter.valuesMatch(row));
 
 
-        Grouper grouper = new Grouper();
         Map<Object, Dataframe> groups = new HashMap<>();
-        groups = df.group(grouper.random(4, 3));
-        groups = df.group(grouper.split(3));
-        groups = df.group(grouper.slidingWindow(2, 3));
-        groups = df.group(grouper.groupByColumnValues("manufacturer", "year"));
+        groups = df.group(Grouper.random(4, 3));
+        groups = df.group(Grouper.split(3));
+        groups = df.group(Grouper.slidingWindow(2, 3));
+        groups = df.group(Grouper.groupByColumnValues("manufacturer", "year"));
 
-        Sorter sorter = new Sorter();
-
-        df0 = df.sort(true, sorter.shuffle());
-        df0 = df.sort(true, sorter.sortByColumns("manufacturer", "year"));
-        df0 = df.sort(true, sorter.sortByColumn("year", v -> Math.abs(v - 2020)));
+        df0 = df.sort(true, Sorter.shuffle());
+        df0 = df.sort(true, Sorter.sortByColumns("manufacturer", "year"));
+        df0 = df.sort(true, Sorter.sortByRow( v -> Math.abs(v.get("year") - 2020)));
 
 
         Aggregator aggr = new Aggregator()
@@ -89,16 +80,15 @@ public class CarsExample
         ar = df.aggregate(aggr);
 
         df0 = df.groupAggregate(
-                grouper.groupByColumnValues("manufacturer", "year"),
+                Grouper.groupByColumnValues("manufacturer", "year"),
                 aggr
         );
-        new Plotter().line(df0);
+        Plotter.line(df0);
 
-        Serializer serializer = new Serializer();
 
-        String csv = serializer.toCsv(true, df0);
+        String csv = Serializer.toCsv(true, df0);
 
-        df0 = serializer.fromCsv(true, csv);
+        df0 = Serializer.fromCsv(true, csv);
 
     }
 }

@@ -1,16 +1,15 @@
 package io.github.lightdataframe.lightweightdataframe;
 
-import java.io.Serializable;
 
 /**
- * Strategy interface to score rows in a dataframe.
+ * Strategy to score rows in a dataframe
  */
-public interface RowScorer extends Serializable
+public interface RowScorer
 {
     /**
-     * Computes and returns the score for a specific row in the given dataframe.
+     * Computes and returns the score for a specific row in the given dataframe
      *
-     * @param df the dataframe containing to score rows from
+     * @param df the dataframe to score rows from
      * @param n the index of the row to be scored
      * @return the computed score
      */

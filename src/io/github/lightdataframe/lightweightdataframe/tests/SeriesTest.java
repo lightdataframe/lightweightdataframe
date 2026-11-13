@@ -34,13 +34,13 @@ class SeriesTest
     void groupBy()
     {
         Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d, 10d));
-        Map<Double, Series> groups = series.groupBy(v -> v % 2 == 0 ? 1d : 0d);
+        Map<Double, Series> groups = series.group(v -> v % 2 == 0 ? 1d : 0d);
         assertEquals(2, groups.size());
         assertEquals(5, groups.get(1d).size());
         assertEquals(5, groups.get(0d).size());
 
 
-        groups = series.groupBy(v -> v > 0 ? 1d : 0d);
+        groups = series.group(v -> v > 0 ? 1d : 0d);
         assertEquals(1, groups.size());
         assertEquals(10, groups.get(1d).size());
 
@@ -67,8 +67,6 @@ class SeriesTest
         Series zscore = series.zscore();
         assertEquals(series, zscore.map(v -> new BigDecimal(v * std + mean).setScale(8, RoundingMode.DOWN).doubleValue()));
 
-        zscore = new Series().cumsum();
-        assertEquals(0, zscore.size());
     }
 
     @Test
@@ -87,12 +85,12 @@ class SeriesTest
     @Test
     void cumsum()
     {
-        Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d));
+        Series series = new Series(Arrays.asList(1d, 2d, Double.NaN, 4d));
         Series cumsum = series.cumsum();
         assertEquals(1, cumsum.get(0));
         assertEquals(3, cumsum.get(1));
-        assertEquals(6, cumsum.get(2));
-        assertEquals(10, cumsum.get(3));
+        assertEquals(Double.NaN, cumsum.get(2));
+        assertEquals(Double.NaN, cumsum.get(3));
 
         cumsum = new Series().cumsum();
         assertEquals(0, cumsum.size());
@@ -105,7 +103,12 @@ class SeriesTest
         double sum = series.sum();
         assertEquals(10, sum);
         sum = new Series().sum();
-        assertEquals(Double.NaN, sum);
+        assertEquals(0, sum);
+
+        Series series0 = new Series(Arrays.asList(1d, 2d, 3d, Double.NaN));
+        assertEquals(Double.NaN, series0.sum());
+        assertEquals(Double.NaN, series0.var());
+        assertEquals(Double.NaN, series0.std());
     }
 
     @Test
@@ -140,9 +143,36 @@ class SeriesTest
     {
         Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d));
         assertTrue(series.var() > 0);
-        assertEquals(new BigDecimal(series.var()).setScale(8, RoundingMode.DOWN), new BigDecimal(Math.pow(series.std(), 2)).setScale(8, RoundingMode.DOWN));
+        assertEquals(BigDecimal.valueOf(series.var()).setScale(8, RoundingMode.DOWN), BigDecimal.valueOf(Math.pow(series.std(), 2)).setScale(8, RoundingMode.DOWN));
 
         assertEquals(Double.NaN, new Series().var());
+    }
+
+    @Test
+    void headAndTail()
+    {
+        Series series = Series.from(0, 1, 2, 4);
+        Series head = series.head(2);
+        assertEquals(2, head.size());
+        assertEquals(0, head.get(0));
+        assertEquals(1, head.get(1));
+
+        head = series.head(5);
+        assertEquals(4, head.size());
+
+        head = series.head(0);
+        assertEquals(0, head.size());
+
+
+        Series tail = series.tail(2);
+        assertEquals(2, tail.size());
+        assertEquals(2, tail.get(0));
+        assertEquals(4, tail.get(1));
+
+        tail = series.tail(5);
+        assertEquals(4, tail.size());
+        tail = series.tail(0);
+        assertEquals(0, tail.size());
     }
 
     @Test
@@ -181,7 +211,7 @@ class SeriesTest
     {
         Series series = new Series(Arrays.asList(3d, 2d, 1d, 4d));
         assertEquals(2.5, series.median());
-        series = new Series(Arrays.asList(1d, 2d, 3d, 4d, 5d, 6d, 7d));
+        series = new Series(Arrays.asList(1d, 7d, 3d, 4d, 5d, 6d, 2d));
         assertEquals(4, series.median());
     }
 
@@ -247,13 +277,14 @@ class SeriesTest
     {
         Series series = Series.from(3d, 2d, 1d, 0d,4, 5, 6, 7, 8, 9);
         double percentile = series.percentile(4);
+        assertEquals(0.4, percentile);
     }
 
     @Test
     void slidingWindow()
     {
-        Series s = Series.from(1,2,3,4);
-        s.slidingWindow(1, 10);
+        Series s = Series.from(1,2,3,4,5,6,7,8,9,10);
+        s.slidingWindow(6, 5);
     }
 
     @Test
@@ -277,13 +308,24 @@ class SeriesTest
     @Test
     public void range()
     {
+        Series range = Series.range(0, 0.1, 0.001);
+        assertEquals(100, range.size());
         assertEquals(5, Series.range(0, 5, 1).size());
     }
 
     @Test
     public void from()
     {
-
         assertEquals(5, Series.from(0, 1, 2, 3, 4).size());
+    }
+
+    @Test
+    public void replace()
+    {
+        Series series = new Series(Arrays.asList(3d, 2d, 1d, Double.NaN, Double.NaN));
+        series = series.replace(0.0, v -> Double.isNaN(v));
+        assertFalse(series.hasNan());
+        series = series.replace(5d, v -> v == 2d);
+        assertEquals(5, series.get(1));
     }
 }

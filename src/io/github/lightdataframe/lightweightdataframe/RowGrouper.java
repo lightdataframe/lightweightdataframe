@@ -1,15 +1,14 @@
 package io.github.lightdataframe.lightweightdataframe;
 
-import java.io.Serializable;
 import java.util.List;
 
 /**
- * Strategy interface for grouping rows in a dataframe.
+ * Strategy for grouping rows in a dataframe
  */
-public interface RowGrouper extends Serializable
+public interface RowGrouper
 {
     /**
-     * Groups a row of the given dataframe into a specified list of groups.
+     * Groups a row of the given dataframe into a specified list of groups
      *
      * @param df the dataframe to group the rows from
      * @param n  the index of the row to group
