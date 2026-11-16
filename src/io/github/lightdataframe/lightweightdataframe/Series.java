@@ -7,6 +7,9 @@ import java.util.function.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+
+
+
 /**
  * Represents a list of numerical values designed to facilitate mathematical and statistical operations.
  * It extends the {@link  java.util.ArrayList} class, adding methods for data manipulation and analysis.

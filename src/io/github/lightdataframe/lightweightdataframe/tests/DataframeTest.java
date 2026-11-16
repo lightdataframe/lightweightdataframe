@@ -4,8 +4,6 @@ import io.github.lightdataframe.lightweightdataframe.*;
 import org.junit.jupiter.api.Test;
 
 
-import java.util.stream.Collectors;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 public class DataframeTest
@@ -64,7 +62,7 @@ public class DataframeTest
     {
         Dataframe df = TestUtil.randomDataframe(1000);
 
-        df.set(true, 0, "col1", null);
+        df.set(true, "col1", 0, Double.NaN);
         df.print();
     }
 
@@ -96,7 +94,7 @@ public class DataframeTest
 
         df.printStatistics();
 
-        df.set(true, 0, "col1", null);
+        df.set(true, "col1", 0, Double.NaN);
         df.printStatistics();
     }
 

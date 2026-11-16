@@ -46,7 +46,7 @@ public class CarsExample
 
         df.append(true, row);
         df.remove(false, 7);
-        df.set(true, 7, "price", null);
+        df.set(true, "price", 7, Double.NaN);
 
         df.print();
 

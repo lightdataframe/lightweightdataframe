@@ -24,15 +24,15 @@ public class Dataframe implements Serializable, Cloneable
 
 
     /**
-     * Retrieves the list of column names.
-     * If the data is empty, an empty list is returned. Otherwise, it provides an unmodifiable list of column names.
+     * Retrieves an unmodifiable list of column names.
+     * If the data is empty, an empty list is returned.
      *
      * @return a list of column names, or an empty list if the dataframe is empty
      */
     public List<String> getColumns()
     {
         if (data.isEmpty())
-            return new ArrayList<>();
+            return Collections.unmodifiableList(new ArrayList<>());
         return Collections.unmodifiableList(new ArrayList<>(data.get(0).keySet()));
     }
 
@@ -98,7 +98,7 @@ public class Dataframe implements Serializable, Cloneable
             newData = IntStream.range(0, size())
                     .mapToObj(i ->
                     {
-                        Map<String, Double> row = new LinkedHashMap<>(getRow(i));
+                        Map<String, Double> row = new LinkedHashMap<>(data.get(i));
                         row.put(column, series.get(i));
                         return row;
                     })
@@ -297,7 +297,7 @@ public class Dataframe implements Serializable, Cloneable
             );
 
         row = new LinkedHashMap<>(row);
-        for(String col : Collections.unmodifiableCollection(row.keySet()))
+        for(String col : getColumns())
             if(row.get(col) == null)
                 row.put(col, Double.NaN);
 
@@ -341,16 +341,59 @@ public class Dataframe implements Serializable, Cloneable
     }
 
     /**
-     * Sets a cell value.
+     * Returns a cell value
+     *
+     * @param column cell column
+     * @param n      cell index
+     * @return the value of the cell
+     * @throws IllegalArgumentException if n < 0 or n >= size()
+     * @throws IllegalArgumentException if {@code column} is not in the dataframe columns
+     */
+    public double get(String column, int n)
+    {
+        if (column == null)
+            throw new IllegalArgumentException("column is null");
+        if (n < 0 || n >= data.size())
+            throw new IllegalArgumentException("index out of bounds");
+        if (!getColumns().contains(column))
+            throw new IllegalArgumentException("column " + column + " not found");
+
+        return data.get(n).get(column);
+    }
+
+    /**
+     * Sets the value of every cell for a given column
      * @param inplace whether the operation is inplace
-     * @param n row index
      * @param column column to set
-     * @param value value to set. if null {@code Double.NaN} is used
+     * @param value new value to set the column with
      * @return a new dataframe instance or this instance depending on the inplace parameter
      * @throws IllegalArgumentException if n < 0 or n >= size()
-     * @throws IllegalArgumentException if column is not in the dataframe columns
+     * @throws IllegalArgumentException if {@code column} is not in the dataframe columns
      */
-    public Dataframe set(boolean inplace, int n, String column, Double value)
+    public Dataframe set(boolean inplace, String column, double value)
+    {
+        if(column == null)
+            throw new IllegalArgumentException("column is null");
+        if(!getColumns().contains(column))
+            throw new IllegalArgumentException("column " + column + " not found");
+
+        Dataframe df = inplace ? this : clone();
+        df.data.forEach(row -> row.put(column, value));
+        return df;
+    }
+
+    /**
+     * Sets a cell value.
+     *
+     * @param inplace whether the operation is inplace
+     * @param column  column to set
+     * @param n       row index
+     * @param value   value to set. if null {@code Double.NaN} is used
+     * @return a new dataframe instance or this instance depending on the inplace parameter
+     * @throws IllegalArgumentException if n < 0 or n >= size()
+     * @throws IllegalArgumentException if {@code column} is not in the dataframe columns
+     */
+    public Dataframe set(boolean inplace, String column, int n, double value)
     {
         if(column == null)
             throw new IllegalArgumentException("column is null");
@@ -360,9 +403,6 @@ public class Dataframe implements Serializable, Cloneable
             throw new IllegalArgumentException("column " + column + " not found");
 
         Dataframe df = inplace ? this : clone();
-
-        if(value == null)
-            value = Double.NaN;
 
         df.data.get(n).put(column, value);
         return df;
@@ -375,13 +415,10 @@ public class Dataframe implements Serializable, Cloneable
      * @param valueTest cell test
      * @return a new dataframe instance or this instance depending on the inplace parameter
      */
-    public Dataframe replace(boolean inplace, Double newValue, Predicate<Double> valueTest)
+    public Dataframe replace(boolean inplace, double newValue, Predicate<Double> valueTest)
     {
         if(valueTest == null)
             throw new IllegalArgumentException("test is null");
-
-        if(newValue == null)
-            newValue = Double.NaN;
 
         Dataframe df = inplace ? this : clone();
         for(Map<String, Double> row : df.data)
@@ -401,15 +438,12 @@ public class Dataframe implements Serializable, Cloneable
      * @param valueTest cell test
      * @return a new dataframe instance or this instance depending on the inplace parameter
      */
-    public Dataframe replace(boolean inplace, String column, Double newValue, Predicate<Double> valueTest)
+    public Dataframe replace(boolean inplace, String column, double newValue, Predicate<Double> valueTest)
     {
         if(!getColumns().contains(column))
             throw new IllegalArgumentException("column " + column + " not found");
         if(valueTest == null)
             throw new IllegalArgumentException("test is null");
-
-        if(newValue == null)
-            newValue = Double.NaN;
 
         Dataframe df = inplace ? this : clone();
         for(Map<String, Double> row : df.data)
@@ -601,7 +635,7 @@ public class Dataframe implements Serializable, Cloneable
         List<Map<String, Double>> sortedData = IntStream.range(0, size())
                 .boxed()
                 .sorted(Comparator.comparingDouble(n -> dir * scorer.getRowScore(this, n)))
-                .map(this::getRow)
+                .map(n -> new LinkedHashMap<>(data.get(n)))
                 .collect(Collectors.toList());
         Dataframe df = new Dataframe();
         df.data = sortedData;
@@ -678,7 +712,28 @@ public class Dataframe implements Serializable, Cloneable
 
         List<Map<String, Double>> filteredData = IntStream.range(0, size())
                 .filter(i -> filter.testRow(this, i))
-                .mapToObj(this::getRow)
+                .mapToObj(i -> new LinkedHashMap<>(data.get(i)))
+                .collect(Collectors.toList());
+        Dataframe df = new Dataframe();
+        df.data = filteredData;
+        return df;
+    }
+
+    /**
+     * Drops rows matching the given {@link RowFilter}.<br>
+     * See {@link Filter} for common filtering strategies.
+     *
+     * @param filter filter to match rows to drop
+     * @return a new dataframe without the dropped rows
+     */
+    public Dataframe drop(RowFilter filter)
+    {
+        if (filter == null)
+            throw new IllegalArgumentException("filter is null");
+
+        List<Map<String, Double>> filteredData = IntStream.range(0, size())
+                .filter(i -> !filter.testRow(this, i))
+                .mapToObj(i -> new LinkedHashMap<>(data.get(i)))
                 .collect(Collectors.toList());
         Dataframe df = new Dataframe();
         df.data = filteredData;
