@@ -44,18 +44,18 @@ public class CarsExample
         row.put("cabrio", 0d);
         row.put("horses", 100d);
 
-        df.append(true, row);
-        df.remove(false, 7);
-        df.set(true, "price", 7, Double.NaN);
+        df.append(row);
+        df.remove(7);
+        df.set("price", 7, Double.NaN);
 
         df.print();
 
 
-        Dataframe df0 = df.filter(Filter.between(0, 1));
-        df0 = df.filter(Filter.head(5));
-        df0 = df.filter(Filter.tail(5));
-        df0 = df.filter(Filter.filterByRow(r -> r.get("price") > 70000));
-        df0 = df.filter(Filter.valuesMatch(row));
+        //Dataframe df0 = df.filter(Filter.between(0, 1));
+        //df0 = df.filter(Filter.head(5));
+        //df0 = df.filter(Filter.tail(5));
+        //df0 = df.filter(Filter.filterByRow(r -> r.get("price") > 70000));
+        //df0 = df.filter(Filter.valuesMatch(row));
 
 
         Map<Object, Dataframe> groups = new HashMap<>();
@@ -64,17 +64,17 @@ public class CarsExample
         groups = df.group(Grouper.slidingWindow(2, 3));
         groups = df.group(Grouper.groupByColumnValues("manufacturer", "year"));
 
+        Dataframe df0;
         df0 = df.sort(true, Sorter.shuffle());
-        df0 = df.sort(true, Sorter.sortByColumns("manufacturer", "year"));
-        df0 = df.sort(true, Sorter.sortByRow( v -> Math.abs(v.get("year") - 2020)));
-
+        df0 = df.sort(true, Sorter.sortByColumns(true, "manufacturer", "year"));
+        df0 = df.sort(true, Sorter.sortByRow(v -> Math.abs(v.get("year") - 2020)));
 
         Aggregator aggr = new Aggregator()
                 .addAggregation("avg. price", d -> d.getColumn("price").average())
                 .addAggregation("manufacturer", d -> d.getColumn("manufacturer").first())
                 .addAggregation("year", d -> d.getColumn("year").first())
-                .addAggregation("count", d -> d.size())
-                ;
+                .addAggregation("count", d -> d.size());
+
         Map<String, Double> ar = new HashMap<>();
 
         ar = df.aggregate(aggr);
@@ -83,6 +83,7 @@ public class CarsExample
                 Grouper.groupByColumnValues("manufacturer", "year"),
                 aggr
         );
+
         Plotter.line(df0);
 
 

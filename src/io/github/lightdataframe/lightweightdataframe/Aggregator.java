@@ -2,6 +2,7 @@ package io.github.lightdataframe.lightweightdataframe;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.ToDoubleBiFunction;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
 
@@ -12,6 +13,7 @@ import java.util.stream.Collectors;
 public class Aggregator
 {
     private final Map<String, ToDoubleFunction<Dataframe>> aggregations = new LinkedHashMap<>();
+
 
     /**
      * Adds a new aggregation function to the aggregator.
@@ -33,14 +35,14 @@ public class Aggregator
 
     /**
      * Performs the aggregation operation on the given dataframe. Aggregations have to be first defined
-     * through the {@link #addAggregation(String, ToDoubleFunction)} ()} method.
+     * through the {@link #addAggregation(String, ToDoubleFunction)} method.
      *
-     * @param df dataframe to perform the aggregation on
+     * @param df    dataframe to perform the aggregation on
      * @return a map containing the aggregated values for each column
      */
     public Map<String, Double> aggregate(Dataframe df)
     {
-        if(df == null)
+        if (df == null)
             throw new IllegalArgumentException("df is null");
 
         return aggregations.keySet()

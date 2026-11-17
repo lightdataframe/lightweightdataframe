@@ -60,18 +60,23 @@ class SerializerTest
         json = Serializer.toJson(JsonFormat.ROWS, df);
         df0 = Serializer.fromJson(JsonFormat.ROWS, json);
 
+        assertEquals(df.getRows(), df0.getRows());
         for(int i = 0; i < df.size(); i++)
             assertEquals(df.getRow(i), df0.getRow(i));
 
 
         json = Serializer.toJson(JsonFormat.COLUMNS, df);
         df0 = Serializer.fromJson(JsonFormat.COLUMNS, json);
+
+        assertEquals(df.getRows(), df0.getRows());
         for(int i = 0; i < df.size(); i++)
             assertEquals(df.getRow(i), df0.getRow(i));
 
 
         json = Serializer.toJson(JsonFormat.COLUMNS_ROWS, df);
         df0 = Serializer.fromJson(JsonFormat.COLUMNS_ROWS, json);
+
+        assertEquals(df.getRows(), df0.getRows());
         for(int i = 0; i < df.size(); i++)
             assertEquals(df.getRow(i), df0.getRow(i));
     }

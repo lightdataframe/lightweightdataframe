@@ -13,20 +13,6 @@ public class Filter
 {
 
     /**
-     * Strategy to retain only the rows with specific values
-     *
-     * @param rowTest predicate to test each row
-     * @return a row filter that retains only the rows that satisfy the predicate
-     */
-    public static RowFilter rowTest(Predicate<Map<String, Double>> rowTest)
-    {
-        if(rowTest == null)
-            throw new IllegalArgumentException("rowTest is null");
-
-        return (df, i) -> rowTest.test(df.getRow(i));
-    }
-
-    /**
      * Strategy that retains only rows with column value matching the predicate
      * @param column column to test
      * @param valueTest predicate to test the column value with
@@ -48,7 +34,7 @@ public class Filter
     }
 
     /**
-     * Strategy to retain only rows matching all the given values
+     * Strategy to retain only rows matching the provided values
      * @param values values to test each row with
      * @return a row filter that retains only the rows with the given values
      */
@@ -62,16 +48,24 @@ public class Filter
                 throw new IllegalArgumentException("one or more columns not found: [" + String.join(", ", values.keySet()) + "] in [" + String.join(", ", df.getColumns()) + "]");
 
             Map<String, Double> row = df.getRow(i);
-            return values.keySet().stream().allMatch(col -> Objects.equals(row.get(col), values.get(col)));
+            return values.keySet()
+                    .stream()
+                    .allMatch(col -> {
+                        Double v = values.get(col);
+                        if(v == null)
+                            v = Double.NaN;
+                        return Objects.equals(row.get(col), v);
+                    });
         };
     }
+
 
     /**
      * Strategy to retain rows based on a given predicate
      * @param rowFilter predicate to test rows with
      * @return a row filter that retains rows based on the given predicate
      */
-    public static RowFilter filterByRow(Predicate<Row> rowFilter)
+    public static RowFilter rowTest(Predicate<Row> rowFilter)
     {
         if(rowFilter == null)
             throw new IllegalArgumentException("rowFilter is null");
@@ -129,5 +123,18 @@ public class Filter
             throw new IllegalArgumentException("retainProbability must be between 0 and 1");
 
         return (df, i) -> Math.random() < retainProbability;
+    }
+
+    /**
+     * Returns a row filter that reverses the result of another filter
+     *
+     * @param filter filter to reverse
+     * @return a row filter that reverses the result of another filter
+     */
+    public static RowFilter reversed(RowFilter filter)
+    {
+        if (filter == null)
+            throw new IllegalArgumentException("filter is null");
+        return (df, i) -> !filter.testRow(df, i);
     }
 }

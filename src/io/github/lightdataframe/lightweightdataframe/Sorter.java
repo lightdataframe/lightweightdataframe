@@ -2,6 +2,7 @@ package io.github.lightdataframe.lightweightdataframe;
 
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.IntStream;
@@ -15,21 +16,26 @@ public class Sorter
 
     /**
      * Strategy to score rows based on column values, first by the first column, then second, third, etc.
-     * @param columns ordered list of columns
+     *
+     * @param nansLast whether nan values should be scored with minimum (nans last) or maximum (nans first) score
+     * @param columns  ordered list of columns
      * @return a row scorer that scores rows based on the column values in column order
      */
-    public static RowScorer sortByColumns(String ...columns)
+    public static RowScorer sortByColumns(boolean nansLast, String... columns)
     {
-        AtomicReference<Double> max = new AtomicReference<>(null);
+        if(Arrays.stream(columns).anyMatch(Objects::isNull))
+            throw new IllegalArgumentException("One or more columns are null");
+        AtomicReference<Double> multiplierAbs = new AtomicReference<>(null);
         AtomicReference<Double> min = new AtomicReference<>(null);
+        AtomicReference<Double> max = new AtomicReference<>(null);
         return (df, n) ->
         {
-            if(!df.getColumns().containsAll(Arrays.asList(columns)))
+            if (!df.getColumns().containsAll(Arrays.asList(columns)))
                 throw new IllegalArgumentException("One or more columns not found: [" + String.join(", ", Arrays.asList(columns)) + "] in [" + String.join(", ", df.getColumns()) + "]");
 
-            if(max.get() == null)
+            if (multiplierAbs.get() == null)
             {
-                double maxValue = Arrays.stream(columns)
+                double maxAbsValue = Arrays.stream(columns)
                         .mapToDouble(col -> df.getColumn(col)
                                 .map(Math::abs)
                                 .withoutNan()
@@ -38,13 +44,12 @@ public class Sorter
                         .filter(v -> !Double.isNaN(v))
                         .max()
                         .orElse(Double.NaN);
-                max.set(maxValue + 1);
+                multiplierAbs.set(maxAbsValue + 2);
             }
-            if(min.get() == null)
+            if (min.get() == null)
             {
                 double minValue = Arrays.stream(columns)
                         .mapToDouble(col -> df.getColumn(col)
-                                .map(Math::abs)
                                 .withoutNan()
                                 .min()
                         )
@@ -53,16 +58,63 @@ public class Sorter
                         .orElse(Double.NaN);
                 min.set(minValue - 1);
             }
-
+            if (max.get() == null)
+            {
+                double maxValue = Arrays.stream(columns)
+                        .mapToDouble(col -> df.getColumn(col)
+                                .withoutNan()
+                                .max()
+                        )
+                        .filter(v -> !Double.isNaN(v))
+                        .max()
+                        .orElse(Double.NaN);
+                max.set(maxValue + 1);
+            }
 
             return IntStream.range(0, columns.length)
-                    .mapToDouble(i -> {
-                        double multiplier = Math.pow(max.get(), columns.length - i);
+                    .mapToDouble(i ->
+                    {
                         Row row = df.getRow(n);
+                        double multiplier = Math.pow(multiplierAbs.get(), columns.length - i);
                         double value = row.get(columns[i]);
-                        return Double.isNaN(value) ? min.get() * multiplier : value * multiplier;
+                        if (Double.isNaN(value) && nansLast)
+                            value = min.get();
+                        if (Double.isNaN(value) && !nansLast)
+                            value = max.get();
+                        return value * multiplier;
                     })
                     .reduce(0, Double::sum);
+        };
+    }
+
+
+    /**
+     * Strategy to score rows by the values of a specific column.
+     *
+     * @param nansLast whether NaN values should appear first or last in the sorted list
+     * @param column   column name to score each row
+     * @param scorer   function to apply to each row value to score it
+     * @return a row scorer that scores rows based on the values of the specified column
+     */
+    public static RowScorer sortByColumn(boolean nansLast, String column, ToDoubleFunction<Double> scorer)
+    {
+        if (column == null)
+            throw new IllegalArgumentException("column is null");
+        if (scorer == null)
+            throw new IllegalArgumentException("scorer is null");
+
+        return (df, n) ->
+        {
+            Row row = df.getRow(n);
+            if (!row.containsKey(column))
+                throw new IllegalArgumentException("column " + column + " not found");
+
+            double value = row.get(column);
+            if (Double.isNaN(value) && nansLast)
+                return - Double.MAX_VALUE;
+            if(Double.isNaN(value) && !nansLast)
+                return Double.MAX_VALUE;
+            return scorer.applyAsDouble(row.get(column));
         };
     }
 
@@ -76,29 +128,6 @@ public class Sorter
         if(scorer == null)
             throw new IllegalArgumentException("Scorer is null");
         return (df, n) -> scorer.applyAsDouble(df.getRow(n));
-    }
-
-    /**
-     * Strategy to score rows by the values of a specific column
-     *
-     * @param column column name to score each row
-     * @param scorer function to apply to each row value to score it
-     * @return a row scorer that scores rows based on the values of the specified column
-     */
-    public static RowScorer sortByColumn(String column, ToDoubleFunction<Double> scorer)
-    {
-        if(column == null)
-            throw new IllegalArgumentException("column is null");
-        if(scorer == null)
-            throw new IllegalArgumentException("scorer is null");
-
-        return (df, n) ->
-        {
-            Row row = df.getRow(n);
-            if (!row.containsKey(column))
-                throw new IllegalArgumentException("column " + column + " not found");
-            return scorer.applyAsDouble(row.get(column));
-        };
     }
 
     /**

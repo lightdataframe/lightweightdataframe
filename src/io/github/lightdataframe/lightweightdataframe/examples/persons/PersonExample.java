@@ -46,9 +46,9 @@ public class PersonExample
         Dataframe df = people.stream()
                 .collect(
                         Dataframe.<Person>collector()
+                                .addColumn(AGE, Person::getAge)
                                 .addColumn(HEIGHT, Person::getHeight)
                                 .addColumn(WEIGHT, Person::getWeight)
-                                .addColumn(AGE, Person::getAge)
                 );
 
         df.printStatistics();
@@ -56,9 +56,11 @@ public class PersonExample
 
         // ---- Sorting ----
 
-        Dataframe sortedDataframe = df.sort( true, Sorter.sortByRow(age -> age.get(AGE)));
+        Dataframe sorted = df.clone();
 
-        Dataframe shuffledDataframe = df.sort( true, Sorter.shuffle());
+        sorted.sort(true, Sorter.sortByRow(age -> age.get(AGE)));
+
+        sorted.sort(true, Sorter.shuffle());
 
 
         // ---- Grouping ----
@@ -70,11 +72,13 @@ public class PersonExample
 
         // ---- Filtering ----
 
-        Dataframe head = df.filter(Filter.head(2));
-        Dataframe between = df.filter(Filter.between(3, 4));
-        Dataframe tail = df.filter(Filter.tail(2));
+        Dataframe filtered = df.clone();
 
-        Dataframe filteredByAge = df.filter(Filter.filterByRow(row -> row.get(AGE) >= 30));
+        Dataframe between = filtered.filter(Filter.between(3, 6));
+        Dataframe head = filtered.filter(Filter.head(2));
+        Dataframe tail = filtered.filter(Filter.tail(2));
+
+        Dataframe filteredByAge = filtered.filter(Filter.rowTest(row -> row.get(AGE) >= 30));
 
 
         // ---- Aggregation ----

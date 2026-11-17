@@ -31,7 +31,8 @@ public class Serializer
             df.getColumns().forEach(col -> sb.append(col).append(","));
             if(!df.getColumns().isEmpty())
                 sb.replace(sb.length() - 1, sb.length(), "");
-            sb.append("\n");
+            if(df.size() > 0)
+                sb.append("\n");
         }
         df.getRows().forEach(row -> {
             for(String col : row.keySet())
@@ -104,7 +105,7 @@ public class Serializer
                             (a, b) -> a,
                             LinkedHashMap::new
                     ));
-            df.append(true, rowMap);
+            df.append(rowMap);
         }
         return df;
     }
@@ -197,7 +198,7 @@ public class Serializer
 
     private static Dataframe fromJsonRows(String json)
     {
-        List<Map<String, Double>> rows = new ArrayList<>();
+        Dataframe df = new Dataframe();
         try
         {
             JSONArray jarr = new JSONArray(json);
@@ -211,7 +212,7 @@ public class Serializer
                     double v = jobj.isNull(key) ? Double.NaN : jobj.getDouble(key);
                     row.put(key, v);
                 }
-                rows.add(row);
+                df.append(row);
             }
         }
         catch (Exception e)
@@ -219,9 +220,6 @@ public class Serializer
             throw new IllegalArgumentException("Invalid Json");
         }
 
-        Dataframe df = new Dataframe();
-        for(Map<String, Double> row : rows)
-            df.append(true, row);
         return df;
     }
 
@@ -267,7 +265,7 @@ public class Serializer
         }
         Dataframe df = new Dataframe();
         for(Map<String, Double> row : rows)
-            df.append(true, row);
+            df.append(row);
         return df;
     }
 
@@ -280,8 +278,7 @@ public class Serializer
 
         Dataframe df = fromJsonRows(jobj.getJSONArray("rows").toString());
 
-        if(!df.getColumns().equals(columns))
-            throw new IllegalStateException("mismatch between columns and rows. Columns: [" + String.join(", ", columns)+"]. Rows: [" + String.join(", ", df.getColumns()) +"]");
+        df.reorderColumns(columns.toArray(new String[0]));
 
         return df;
     }

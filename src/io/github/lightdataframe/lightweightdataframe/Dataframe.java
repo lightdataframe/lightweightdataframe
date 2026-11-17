@@ -7,10 +7,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 
-
-
 /**
- * Implementation of a dataframe, a tabular data structure for double values.
+ * Implementation of a dataframe, a tabular data structure for double values.<br>
+ *
  */
 public class Dataframe implements Serializable, Cloneable
 {
@@ -20,8 +19,9 @@ public class Dataframe implements Serializable, Cloneable
     /**
      * Constructs an empty dataframe.
      */
-    public Dataframe(){}
-
+    public Dataframe()
+    {
+    }
 
     /**
      * Retrieves an unmodifiable list of column names.
@@ -36,17 +36,16 @@ public class Dataframe implements Serializable, Cloneable
         return Collections.unmodifiableList(new ArrayList<>(data.get(0).keySet()));
     }
 
-
     /**
-     * Retrieves a column from the dataframe as a {@link Series}. Modifications to the sSeries will not affect the dataframe.
+     * Retrieves a column from the dataframe as a {@link Series}. Modifications to the series will not affect the dataframe.
      *
-     * @param column The name of the column to retrieve. If the dataframe is not empty, it must exist in the dataframe.
-     * @return A series containing the values of the specified column. If the dataframe is empty, an empty series is returned.
+     * @param column The name of the column to retrieve. If the dataframe is not empty, it must exist in the dataframe
+     * @return A series containing the values of the specified column. If the dataframe is empty, an empty series is returned
      * @throws IllegalArgumentException If the specified column name does not exist in the dataframe
      */
     public Series getColumn(String column)
     {
-        if(column == null)
+        if (column == null)
             throw new IllegalArgumentException("column is null");
         if (!data.isEmpty() && !data.get(0).containsKey(column))
             throw new IllegalArgumentException("column " + column + " not found");
@@ -59,7 +58,6 @@ public class Dataframe implements Serializable, Cloneable
                 .collect(Series.collector(v -> v));
     }
 
-
     /**
      * Sets a column in the dataframe with the specified name and data from the given series. If the column already
      * exists it is replaced, or a new column is added otherwise
@@ -68,25 +66,24 @@ public class Dataframe implements Serializable, Cloneable
      *
      * @param column the name of the column to set
      * @param series the series containing the data for the column
-     * @return a new dataframe instance with the specified column set
+     * @return this instance with the specified column set
      * @throws IllegalArgumentException if the series size does not match the existing dataframe size
      */
     public Dataframe setColumn(String column, Series series)
     {
-        if(column == null)
+        if (column == null)
             throw new IllegalArgumentException("column is null");
-        if(series == null)
+        if (series == null)
             throw new IllegalArgumentException("series is null");
-        if(!data.isEmpty() && data.size() != series.size())
+        if (!data.isEmpty() && data.size() != series.size())
             throw new IllegalArgumentException("series size does not match dataframe size");
 
 
-        List<Map<String, Double>> newData;
-
-        if(data.isEmpty())
+        if (data.isEmpty())
         {
-            newData = series.stream()
-                    .map(v -> {
+            data = series.stream()
+                    .map(v ->
+                    {
                         Map<String, Double> map = new LinkedHashMap<>();
                         map.put(column, v);
                         return map;
@@ -95,7 +92,7 @@ public class Dataframe implements Serializable, Cloneable
         }
         else
         {
-            newData = IntStream.range(0, size())
+            data = IntStream.range(0, size())
                     .mapToObj(i ->
                     {
                         Map<String, Double> row = new LinkedHashMap<>(data.get(i));
@@ -104,9 +101,7 @@ public class Dataframe implements Serializable, Cloneable
                     })
                     .collect(Collectors.toList());
         }
-        Dataframe d = new Dataframe();
-        d.data = newData;
-        return d;
+        return this;
     }
 
     /**
@@ -114,53 +109,56 @@ public class Dataframe implements Serializable, Cloneable
      *
      * @param column      name of the column to be replaced. Must exist in the dataframe
      * @param mapFunction function that takes a series and returns a series of the same size
-     * @return a new dataframe instance with the specified column replaced
+     * @return this instance with the specified column replaced
      */
     public Dataframe replaceColumn(String column, Function<Series, Series> mapFunction)
     {
-        if(column == null)
+        if (column == null)
             throw new IllegalArgumentException("column is null");
-        if(mapFunction == null)
+        if (mapFunction == null)
             throw new IllegalArgumentException("mapFunction is null");
         if (!getColumns().contains(column))
             throw new IllegalArgumentException("column " + column + " not found");
 
         Series colSeries = getColumn(column);
         Series newSeries = mapFunction.apply(colSeries);
+
+        if (newSeries == null)
+            throw new IllegalArgumentException("mapFunction returned null");
         if (newSeries.size() != colSeries.size())
             throw new IllegalArgumentException("series size must be equal to column size");
 
         return setColumn(column, newSeries);
     }
 
-
     /**
      * Renames a specified column in the dataframe to a new name. The column's existing data
      * is preserved under the new name.
      *
-     * @param column The current name of the column to be renamed. Must exist in the dataframe
+     * @param column  The current name of the column to be renamed. Must exist in the dataframe
      * @param newName The new name for the column. It must be a unique name not already present in the dataframe
-     * @return A new dataframe instance with the specified column renamed
+     * @return this instance with the specified column renamed
      * @throws IllegalArgumentException If the specified column does not exist
      * @throws IllegalArgumentException If the specified new column already exists
      */
     public Dataframe renameColumn(String column, String newName)
     {
-        if(column == null)
+        if (column == null)
             throw new IllegalArgumentException("column is null");
-        if(newName == null)
+        if (newName == null)
             throw new IllegalArgumentException("newName is null");
-        if(!getColumns().contains(column))
+        if (!getColumns().contains(column))
             throw new IllegalArgumentException("column " + column + " not found");
-        if(getColumns().contains(newName) && !column.equals(newName))
+        if (getColumns().contains(newName) && !column.equals(newName))
             throw new IllegalArgumentException("column " + newName + " already exists");
 
-        List<Map<String, Double>> newData = data.stream()
-                .map(row -> {
+        data = data.stream()
+                .map(row ->
+                {
                     Map<String, Double> map = new LinkedHashMap<>();
 
-                    for(String col : row.keySet())
-                        if(col.equals(column))
+                    for (String col : row.keySet())
+                        if (col.equals(column))
                             map.put(newName, row.get(col));
                         else
                             map.put(col, row.get(col));
@@ -168,56 +166,47 @@ public class Dataframe implements Serializable, Cloneable
                     return map;
                 })
                 .collect(Collectors.toList());
-        Dataframe d = new Dataframe();
-        d.data = newData;
-        return d;
+        return this;
     }
-
 
     /**
      * Removes the specified column from the dataframe.
      *
      * @param column the name of the column to be removed
-     * @return a new dataframe instance without the specified column
+     * @return this instance without the specified column
      * @throws IllegalArgumentException if the specified column does not exist in the Dataframe
      */
     public Dataframe dropColumn(String column)
     {
-        if(column == null)
+        if (column == null)
             throw new IllegalArgumentException("column is null");
-        if(!getColumns().contains(column))
+        if (!getColumns().contains(column))
             throw new IllegalArgumentException("column " + column + " not found");
 
-        List<Map<String, Double>> newData = data.stream()
-                .map(row -> {
-                    Map<String, Double> newRow = new LinkedHashMap<>(row);
-                    newRow.remove(column);
-                    return newRow;
-                })
+        data = data.stream()
+                .peek(row -> row.remove(column))
                 .collect(Collectors.toList());
-        Dataframe d = new Dataframe();
-        d.data = newData;
-        return d;
-    }
 
+        return this;
+    }
 
     /**
      * Reorders the columns of the dataframe based on the specified column order.
      * Columns not mentioned in the order will be appended at the end, in the order of the current dataframe's columns.
      *
      * @param columns The names of the columns in the desired order. Unspecified columns will be appended afterward
-     * @return A new Dataframe with the columns rearranged in the specified order
+     * @return this instance with the columns rearranged in the specified order
      * @throws IllegalArgumentException if one or more specified columns do not exist in the Dataframe
      */
     public Dataframe reorderColumns(String... columns)
     {
-        for(String column : columns)
-            if(column == null)
+        for (String column : columns)
+            if (column == null)
                 throw new IllegalArgumentException("column is null");
         if (columns.length > 0 && !getColumns().containsAll(Arrays.asList(columns)))
             throw new IllegalArgumentException("one or more columns not found: [" + String.join(", ", columns) + "] in [" + String.join(", ", getColumns()) + "]");
 
-        List<Map<String, Double>> newData = data.stream()
+        data = data.stream()
                 .map(row ->
                 {
                     Map<String, Double> prevRow = new LinkedHashMap<>(row);
@@ -227,14 +216,12 @@ public class Dataframe implements Serializable, Cloneable
                     return newRow;
                 })
                 .collect(Collectors.toList());
-        Dataframe d = new Dataframe();
-        d.data = newData;
-        return d;
+
+        return this;
     }
 
-
     /**
-     * Returns an unmodifiable view of the dataframe as a list of rows. In each row keys are ordered by the dataframe's column names
+     * Returns an unmodifiable view of the dataframe as a list of rows. In each row keys are ordered by the dataframe's column names.
      *
      * @return an unmodifiable view of the dataframe as a list of rows
      */
@@ -242,28 +229,26 @@ public class Dataframe implements Serializable, Cloneable
     {
         return Collections.unmodifiableList(
                 IntStream.range(0, data.size())
-                        .mapToObj(i -> new Row(i, data.get(i)))
+                        .mapToObj(n -> new Row(n, data.get(n)))
                         .collect(Collectors.toList())
         );
     }
-
 
     /**
      * Retrieves an unmodifiable view of the row at the specified index.
      * Row keys are ordered by the dataframe's column names.
      *
      * @param n the index of the row to retrieve. Must be within valid bounds (0 to size() - 1)
-     * @return an unmodifiable row for the specified index
+     * @return a view row at the specified index
      * @throws IllegalArgumentException if the index is out of bounds
      */
     public Row getRow(int n)
     {
-        if(n < 0 || n >= data.size())
+        if (n < 0 || n >= data.size())
             throw new IllegalArgumentException("index out of bounds");
 
         return new Row(n, data.get(n));
     }
-
 
     /**
      * Counts the number of rows in the dataframe
@@ -275,42 +260,33 @@ public class Dataframe implements Serializable, Cloneable
         return data.size();
     }
 
-
     /**
      * Appends a new row to the dataframe.
-     * If the dataframe already contains data, the row's keys must match the existing column names.
+     * If the dataframe already contains data, the row's keys must contain all the dataframe columns
      *
-     * @param inplace A boolean flag indicating whether the operation should be performed in-place
-     *                If true, the current dataframe is modified. If false, a new dataframe instance is created and returned
-     * @param row     A map representing the row to be appended. Keys represent column names, and values represent the associated data
-     * @return a new dataframe instance or this instance depending on inplace parameter
+     * @param row A map representing the row to be appended. Keys represent column names, and values represent the associated data
+     * @return this instance with the row appended
      * @throws IllegalArgumentException If the supplied row doesn't contain all column names of the dataframe
      */
-    public Dataframe append(boolean inplace, Map<String, Double> row)
+    public Dataframe append(Map<String, Double> row)
     {
-        if(row == null)
+        if (row == null)
             throw new IllegalArgumentException("row is null");
-
-        if(!data.isEmpty() && !row.keySet().containsAll(getColumns()))
+        if (!data.isEmpty() && !row.keySet().containsAll(getColumns()))
             throw new IllegalArgumentException(
-                    "attempting to add a row with invalid columns: [" + String.join(", ", row.keySet()) + "]. Should be [" + String.join(", ", getColumns()) + "]"
+                    "attempting to add a row with invalid columns: [" + String.join(", ", row.keySet()) + "] in [" + String.join(", ", getColumns()) + "]"
             );
 
+
         row = new LinkedHashMap<>(row);
-        for(String col : getColumns())
-            if(row.get(col) == null)
+        for (String col : row.keySet()) // The map could contain null values, so we need to replace them with Double.NaN
+            if (row.get(col) == null)
                 row.put(col, Double.NaN);
 
 
-        Dataframe df = inplace ? this : clone();
-
-        LinkedHashMap<String, Double> newRow;
-
-        if(df.data.isEmpty())
-            newRow = new LinkedHashMap<>(row);
-        else
+        if (!data.isEmpty()) // Only dataframe columns are retained and are ordered in column order
         {
-            newRow = df.getColumns().stream()
+            row = getColumns().stream()
                     .collect(Collectors.toMap(
                             column -> column,
                             row::get,
@@ -318,26 +294,71 @@ public class Dataframe implements Serializable, Cloneable
                             LinkedHashMap::new
                     ));
         }
+        List<Map<String, Double>> newData = new ArrayList<>(data);
+        newData.add(row);
+        data = newData;
+        return this;
+    }
 
-        df.data.add(newRow);
-        return df;
+    /**
+     * Inserts a row at the specified index. If the dataframe is empty n must be 0.
+     * If the dataframe already contains data, the row's keys must contain all the dataframe columns
+     *
+     * @param n   index at which insert the row
+     * @param row row to add
+     * @return this instance with the row added
+     * @throws IllegalArgumentException if n < 0 or n >= size()
+     * @throws IllegalArgumentException if the row doesn't contain all column names of the dataframe
+     */
+    public Dataframe insert(int n, Map<String, Double> row)
+    {
+        if (row == null)
+            throw new IllegalArgumentException("row is null");
+        if (n < 0 || n > data.size())
+            throw new IllegalArgumentException("index out of bounds");
+        if (!data.isEmpty() && !row.keySet().containsAll(getColumns()))
+            throw new IllegalArgumentException(
+                    "attempting to add a row with invalid columns: [" + String.join(", ", row.keySet()) + "] in [" + String.join(", ", getColumns()) + "]"
+            );
+
+        row = new LinkedHashMap<>(row);
+        for (String col : row.keySet()) // The map could contain null values, so we need to replace them with Double.NaN
+            if (row.get(col) == null)
+                row.put(col, Double.NaN);
+
+
+        if (!data.isEmpty()) // Only dataframe columns are retained and reordered in column order
+        {
+            row = getColumns().stream()
+                    .collect(Collectors.toMap(
+                            column -> column,
+                            row::get,
+                            (a, b) -> a,
+                            LinkedHashMap::new
+                    ));
+        }
+        List<Map<String, Double>> newData = new ArrayList<>(data);
+        newData.add(n, row);
+        data = newData;
+        return this;
     }
 
     /**
      * Removes a row from the dataframe.
-     * @param inplace whether the operation is inplace
+     *
      * @param n index of the row to remove
-     * @return a new dataframe instance or this instance depending on the inplace parameter
-     * @throws IllegalArgumentException if n < 0 or > size()
+     * @return this instance without the removed row
+     * @throws IllegalArgumentException if n < 0 or >= size()
      */
-    public Dataframe remove(boolean inplace, int n)
+    public Dataframe remove(int n)
     {
-        if(n < 0 || n >= data.size())
+        if (n < 0 || n >= data.size())
             throw new IllegalArgumentException("index out of bounds");
 
-        Dataframe df = inplace ? this : clone();
-        df.data.remove(n);
-        return df;
+        List<Map<String, Double>> newData = new ArrayList<>(data);
+        newData.remove(n);
+        data = newData;
+        return this;
     }
 
     /**
@@ -362,96 +383,163 @@ public class Dataframe implements Serializable, Cloneable
     }
 
     /**
+     * Sets the values for a given row
+     *
+     * @param n      row index
+     * @param values values to set
+     * @return this instance with the modified row
+     * @throws IllegalArgumentException if n < 0 or n >= size()
+     */
+    public Dataframe set(int n, Map<String, Double> values)
+    {
+        if (values == null)
+            throw new IllegalArgumentException("values is null");
+        if (n < 0 || n >= data.size())
+            throw new IllegalArgumentException("index out of bounds");
+
+        values = new LinkedHashMap<>(values);
+        for (String col : values.keySet()) // The map could contain null values, so we need to replace them with Double.NaN
+            if (values.get(col) == null)
+                values.put(col, Double.NaN);
+
+        Map<String, Double> row = data.get(n);
+        for (String column : getColumns())
+            if (values.containsKey(column))
+                row.put(column, values.get(column));
+
+        return this;
+
+    }
+
+    /**
      * Sets the value of every cell for a given column
-     * @param inplace whether the operation is inplace
+     *
      * @param column column to set
-     * @param value new value to set the column with
-     * @return a new dataframe instance or this instance depending on the inplace parameter
+     * @param value  new value to set the column with
+     * @return this instance with the values set
      * @throws IllegalArgumentException if n < 0 or n >= size()
      * @throws IllegalArgumentException if {@code column} is not in the dataframe columns
      */
-    public Dataframe set(boolean inplace, String column, double value)
+    public Dataframe set(String column, double value)
     {
-        if(column == null)
+        if (column == null)
             throw new IllegalArgumentException("column is null");
-        if(!getColumns().contains(column))
+        if (!getColumns().contains(column))
             throw new IllegalArgumentException("column " + column + " not found");
 
-        Dataframe df = inplace ? this : clone();
-        df.data.forEach(row -> row.put(column, value));
-        return df;
+        data.forEach(row -> row.put(column, value));
+        return this;
+    }
+
+    /**
+     * Sets cells of a given row.
+     *
+     * @param n     row index
+     * @param value new row cells value
+     * @return this instance with the modified row
+     */
+    public Dataframe set(int n, double value)
+    {
+        if (n < 0 || n >= data.size())
+            throw new IllegalArgumentException("index out of bounds");
+
+        data.get(n).keySet().forEach(column -> data.get(n).put(column, value));
+        return this;
     }
 
     /**
      * Sets a cell value.
      *
-     * @param inplace whether the operation is inplace
-     * @param column  column to set
-     * @param n       row index
-     * @param value   value to set. if null {@code Double.NaN} is used
-     * @return a new dataframe instance or this instance depending on the inplace parameter
+     * @param column column to set
+     * @param n      row index
+     * @param value  value to set. if null {@code Double.NaN} is used
+     * @return this instance with the value set
      * @throws IllegalArgumentException if n < 0 or n >= size()
      * @throws IllegalArgumentException if {@code column} is not in the dataframe columns
      */
-    public Dataframe set(boolean inplace, String column, int n, double value)
+    public Dataframe set(String column, int n, double value)
     {
-        if(column == null)
+        if (column == null)
             throw new IllegalArgumentException("column is null");
-        if(n < 0 || n >= data.size())
+        if (n < 0 || n >= data.size())
             throw new IllegalArgumentException("index out of bounds");
-        if(!getColumns().contains(column))
+        if (!getColumns().contains(column))
             throw new IllegalArgumentException("column " + column + " not found");
 
-        Dataframe df = inplace ? this : clone();
-
-        df.data.get(n).put(column, value);
-        return df;
+        data.get(n).put(column, value);
+        return this;
     }
 
     /**
      * Replaces cells with the given value.
-     * @param inplace whether the operation is inplace
-     * @param newValue new cell value
+     *
+     * @param newValue  new cell value
      * @param valueTest cell test
-     * @return a new dataframe instance or this instance depending on the inplace parameter
+     * @return this instance with values replaced
      */
-    public Dataframe replace(boolean inplace, double newValue, Predicate<Double> valueTest)
+    public Dataframe replace(double newValue, Predicate<Double> valueTest)
     {
-        if(valueTest == null)
+        if (valueTest == null)
             throw new IllegalArgumentException("test is null");
 
-        Dataframe df = inplace ? this : clone();
-        for(Map<String, Double> row : df.data)
+        for (Map<String, Double> row : data)
         {
-            for(String col : row.keySet())
-                if(valueTest.test(row.get(col)))
+            for (String col : row.keySet())
+                if (valueTest.test(row.get(col)))
                     row.put(col, newValue);
         }
-        return df;
+        return this;
     }
 
     /**
      * Replaces cells of a column with the given value.
-     * @param inplace whether the operation is inplace
-     * @param column column to replace values of
-     * @param newValue new cell value
+     *
+     * @param column    column to replace values of
+     * @param newValue  new cell value
      * @param valueTest cell test
-     * @return a new dataframe instance or this instance depending on the inplace parameter
+     * @return this instance with the values replaced
      */
-    public Dataframe replace(boolean inplace, String column, double newValue, Predicate<Double> valueTest)
+    public Dataframe replace(String column, double newValue, Predicate<Double> valueTest)
     {
-        if(!getColumns().contains(column))
-            throw new IllegalArgumentException("column " + column + " not found");
-        if(valueTest == null)
+        if (column == null)
+            throw new IllegalArgumentException("column is null");
+        if (valueTest == null)
             throw new IllegalArgumentException("test is null");
+        if (!getColumns().contains(column))
+            throw new IllegalArgumentException("column " + column + " not found");
 
-        Dataframe df = inplace ? this : clone();
-        for(Map<String, Double> row : df.data)
+        for (Map<String, Double> row : data)
         {
-            if(valueTest.test(row.get(column)))
+            if (valueTest.test(row.get(column)))
                 row.put(column, newValue);
         }
-        return df;
+        return this;
+    }
+
+    /**
+     * Replaces cells of a given row.
+     *
+     * @param n         row index
+     * @param newValue  nw cell value
+     * @param valueTest cell test
+     * @return this instance with the modified row
+     */
+    public Dataframe replace(int n, double newValue, Predicate<Double> valueTest)
+    {
+        if (valueTest == null)
+            throw new IllegalArgumentException("valueTest is null");
+        if (n < 0 || n >= data.size())
+            throw new IllegalArgumentException("index out of bounds");
+
+        Map<String, Double> row = data.get(n);
+
+        row.keySet().forEach(column ->
+        {
+            if (valueTest.test(row.get(column)))
+                row.put(column, newValue);
+        });
+        return this;
+
     }
 
     /**
@@ -477,14 +565,13 @@ public class Dataframe implements Serializable, Cloneable
     public Dataframe statistics()
     {
         List<Map<String, Double>> rows;
-        if(!data.isEmpty())
+        if (!data.isEmpty())
         {
             rows = getColumns()
                     .stream()
                     .map(column -> getColumn(column).withoutNan().statistics())
                     .collect(Collectors.toList());
-        }
-        else
+        } else
         {
             rows = new ArrayList<>();
             Series s = new Series();
@@ -496,19 +583,33 @@ public class Dataframe implements Serializable, Cloneable
         return df;
     }
 
-
     private static int maxPrintedRows = 13;
+
+    private static int printedValuesLength = 20;
 
     /**
      * Sets the maximum number of row printed when calling {@link #print()}
-     * If the number of rows is greater than this value, middle values are skipped and only the head and tail
-     * @param n
+     * If the number of rows is greater than this value, middle values are skipped and only the head and tail is printed
+     * Default is 13.
+     * @param n maximum number of rows to print. Must be >= 0
      */
     public static void setMaxPrintedRows(int n)
     {
-        if(n < 0)
+        if (n < 0)
             throw new IllegalArgumentException("n must >= 0");
         maxPrintedRows = n;
+    }
+
+    /**
+     * Sets the length (number of characters) of the printed values when calling {@link #print()}. Default is 12.
+     *
+     * @param n length of printed values
+     */
+    public static void setPrintedValuesLength(int n)
+    {
+        if (n <= 0)
+            throw new IllegalArgumentException("n must > 0");
+        printedValuesLength = n;
     }
 
     /**
@@ -516,15 +617,15 @@ public class Dataframe implements Serializable, Cloneable
      */
     public void print()
     {
+        String formatString = "%" + printedValuesLength + "s";
         StringBuilder sb = new StringBuilder();
         List<String> columns = getColumns();
         buildHeader(sb, columns);
-        if(size() <= maxPrintedRows)
+        if (size() <= maxPrintedRows)
         {
             for (Map<String, Double> row : data)
                 buildLine(sb, "", row);
-        }
-        else
+        } else
         {
             List<Map<String, Double>> head = data.stream()
                     .limit(maxPrintedRows / 2)
@@ -532,21 +633,20 @@ public class Dataframe implements Serializable, Cloneable
             for (Map<String, Double> row : head)
                 buildLine(sb, "", row);
 
-            sb.append(String.format("%20s", ""));
-            columns.forEach(col -> sb.append(String.format("%20s", "...")));
+            sb.append(String.format(formatString, ""));
+            columns.forEach(col -> sb.append(String.format(formatString, "...")));
             sb.append("\n");
 
             List<Map<String, Double>> tail = data.stream()
-                    .sorted(Comparator.comparingInt(row -> - data.indexOf(row)))
+                    .sorted(Comparator.comparingInt(row -> -data.indexOf(row)))
                     .limit(maxPrintedRows / 2)
                     .collect(Collectors.toList());
-            tail.sort(Comparator.comparingInt(row -> - tail.indexOf(row)));
+            tail.sort(Comparator.comparingInt(row -> -tail.indexOf(row)));
             for (Map<String, Double> row : tail)
                 buildLine(sb, "", row);
         }
         System.out.print(sb);
     }
-
 
     /**
      * Prints to standard output the statistical summary of the dataframe in a tabular format.
@@ -575,9 +675,10 @@ public class Dataframe implements Serializable, Cloneable
      */
     private void buildHeader(StringBuilder sb, List<String> columns)
     {
-        sb.append(String.format("%20s", ""));
+        String formatString = "%" + printedValuesLength + "s";
+        sb.append(String.format(formatString, ""));
         for (String col : columns)
-            sb.append(String.format("%20s", col));
+            sb.append(String.format(formatString, col));
         sb.append("\n");
     }
 
@@ -586,15 +687,17 @@ public class Dataframe implements Serializable, Cloneable
      */
     private void buildLine(StringBuilder sb, String columnName, Map<String, Double> row)
     {
-        sb.append(String.format("%20s", columnName));
+        String columnFormatString = "%" + printedValuesLength + "s";
+        String numberFormatString = "%" + printedValuesLength + ".3f";
+        sb.append(String.format(columnFormatString, columnName));
         for (Double cval : row.values())
-            sb.append(String.format("%20.3f", cval));
+            sb.append(String.format(numberFormatString, cval));
         sb.append("\n");
     }
 
-
     /**
      * Returns a deep copy of the dataframe.
+     *
      * @return a deep copy of the dataframe
      */
     @Override
@@ -607,7 +710,8 @@ public class Dataframe implements Serializable, Cloneable
 
     /**
      * Returns a compact string representation of the dataframe
-     * @return  a compact string representation of the dataframe
+     *
+     * @return a compact string representation of the dataframe
      */
     @Override
     public String toString()
@@ -616,30 +720,31 @@ public class Dataframe implements Serializable, Cloneable
                 "Dataframe(size=%d, columns=[%s])",
                 data.size(),
                 String.join(", ", getColumns())
-                );
+        );
     }
 
     /**
      * Sorts the dataframe rows by the given {@link RowScorer}.<br>
      * See {@link Sorter} for common scoring strategies.
+     *
      * @param ascending true if the rows should be sorted in ascending order, false for descending order
      * @param scorer    the scorer to use for sorting the rows
-     * @return a new dataframe containing the sorted rows
+     * @return this instance with sorted rows
      */
     public Dataframe sort(boolean ascending, RowScorer scorer)
     {
-        if(scorer == null)
+        if (scorer == null)
             throw new IllegalArgumentException("scorer is null");
 
         double dir = ascending ? 1 : -1;
-        List<Map<String, Double>> sortedData = IntStream.range(0, size())
+
+        data = IntStream.range(0, size())
                 .boxed()
                 .sorted(Comparator.comparingDouble(n -> dir * scorer.getRowScore(this, n)))
-                .map(n -> new LinkedHashMap<>(data.get(n)))
+                .map(n -> data.get(n))
                 .collect(Collectors.toList());
-        Dataframe df = new Dataframe();
-        df.data = sortedData;
-        return df;
+
+        return this;
     }
 
     /**
@@ -647,12 +752,12 @@ public class Dataframe implements Serializable, Cloneable
      * For example, grouping the given rows in the following way:<br>
      * {@code row0: [group0, group1]}<br>
      * {@code row1: [group1, group2]}<br>
-     * {@code row2: [group2]}<br>
+     * {@code row2: [group2, group2]}<br>
      * <p>
      * results into the groups:<br>
      * {@code group0: [row0]}<br>
      * {@code group1: [row0, row1]}<br>
-     * {@code group2: [row1, row2]}<br>
+     * {@code group2: [row1, row2, row2]}<br>
      * <p>
      * See {@link Grouper} for common grouping strategies.
      *
@@ -661,7 +766,7 @@ public class Dataframe implements Serializable, Cloneable
      */
     public Map<Object, Dataframe> group(RowGrouper grouper)
     {
-        if(grouper == null)
+        if (grouper == null)
             throw new IllegalArgumentException("grouper is null");
 
         Map<Object, Dataframe> groups = new LinkedHashMap<>();
@@ -674,22 +779,22 @@ public class Dataframe implements Serializable, Cloneable
             {
                 if (!groups.containsKey(grp))
                     groups.put(grp, new Dataframe());
-                groups.get(grp).append(true, row);
+                groups.get(grp).append(row);
             }
         }
         return groups;
     }
 
-
     /**
      * Finds indices of rows matching the given {@link RowFilter}.
      * See {@link Filter} for common filtering strategies.
+     *
      * @param filter filter to use to match rows
      * @return indices of the rows matching the filter
      */
     public List<Integer> find(RowFilter filter)
     {
-        if(filter == null)
+        if (filter == null)
             throw new IllegalArgumentException("filter is null");
 
         return IntStream.range(0, size())
@@ -703,20 +808,19 @@ public class Dataframe implements Serializable, Cloneable
      * See {@link Filter} for common filtering strategies.
      *
      * @param filter filter to use for filtering the rows
-     * @return a new dataframe containing the filtered rows
+     * @return this instance with only the filtered rows
      */
     public Dataframe filter(RowFilter filter)
     {
-        if(filter == null)
+        if (filter == null)
             throw new IllegalArgumentException("filter is null");
 
-        List<Map<String, Double>> filteredData = IntStream.range(0, size())
-                .filter(i -> filter.testRow(this, i))
-                .mapToObj(i -> new LinkedHashMap<>(data.get(i)))
+        data = IntStream.range(0, size())
+                .filter(n -> filter.testRow(this, n))
+                .mapToObj(n -> data.get(n))
                 .collect(Collectors.toList());
-        Dataframe df = new Dataframe();
-        df.data = filteredData;
-        return df;
+
+        return this;
     }
 
     /**
@@ -724,20 +828,19 @@ public class Dataframe implements Serializable, Cloneable
      * See {@link Filter} for common filtering strategies.
      *
      * @param filter filter to match rows to drop
-     * @return a new dataframe without the dropped rows
+     * @return this instance without the dropped rows
      */
     public Dataframe drop(RowFilter filter)
     {
         if (filter == null)
             throw new IllegalArgumentException("filter is null");
 
-        List<Map<String, Double>> filteredData = IntStream.range(0, size())
+        data = IntStream.range(0, size())
                 .filter(i -> !filter.testRow(this, i))
-                .mapToObj(i -> new LinkedHashMap<>(data.get(i)))
+                .mapToObj(i -> data.get(i))
                 .collect(Collectors.toList());
-        Dataframe df = new Dataframe();
-        df.data = filteredData;
-        return df;
+
+        return this;
     }
 
     /**
@@ -748,7 +851,7 @@ public class Dataframe implements Serializable, Cloneable
      */
     public Map<String, Double> aggregate(Aggregator aggregator)
     {
-        if(aggregator == null)
+        if (aggregator == null)
             throw new IllegalArgumentException("aggregator is null");
 
         return aggregator.aggregate(this);
@@ -763,9 +866,9 @@ public class Dataframe implements Serializable, Cloneable
      */
     public Dataframe groupAggregate(RowGrouper grouper, Aggregator aggregator)
     {
-        if(grouper == null)
+        if (grouper == null)
             throw new IllegalArgumentException("grouper is null");
-        if(aggregator == null)
+        if (aggregator == null)
             throw new IllegalArgumentException("aggregator is null");
 
         Map<Object, Dataframe> groups = group(grouper);
@@ -775,12 +878,10 @@ public class Dataframe implements Serializable, Cloneable
                 .map(aggregator::aggregate)
                 .collect(Collectors.toList());
 
-
         Dataframe df = new Dataframe();
         df.data = aggregated;
         return df;
     }
-
 
     /**
      * Creates a new collector for converting a stream of elements into a dataframe.
@@ -789,47 +890,55 @@ public class Dataframe implements Serializable, Cloneable
      *
      * @param <T> the type of elements in the input stream
      * @return a {@link Dataframe.Collector} instance that can be used to collect stream elements
-     *         into a Dataframe structure
+     * into a Dataframe structure
      */
     public static <T> Dataframe.Collector<T> collector()
     {
         return new Dataframe.Collector<>();
     }
 
-
     /**
      * Collector to transform a stream of objects into a {@link Dataframe}.
      * The collector uses user-defined mapping functions to derive numeric values for columns from
      * the elements in the stream.<br>
      * For example,<br>
-     *
+     * <p>
      * {@code collector.addColumn("age", Person::getAge);} <br>
      * {@code collector.addColumn("weight", Person::getWeight);} <br>
-     *
-     *
-     *
+     * <p>
+     * <p>
+     * <p>
      * will result in a dataframe with two columns age and weight.
+     *
      * @param <T> the generic type of input elements to be processed by the collector
      *            for each column.
      */
-    public static class Collector<T> implements java.util.stream.Collector<T, List<Map<String, Double>>, Dataframe>
+    public static class Collector<T> implements java.util.stream.Collector<T, Dataframe, Dataframe>
     {
-        private final Map<String, Function<T, Double>> functions = new HashMap<>();
+        private final Map<String, ToDoubleFunction<T>> functions = new LinkedHashMap<>();
 
-        private Collector() {}
+        private Collector()
+        {
+        }
 
         /**
-         * Configures a column for the result Dataframe
+         * Configures a column for the result dataframe.
          *
          * @param columnName   name of the column
-         * @param columnGetter function to extract the column value from the input element
+         * @param columnGetter function to extract the column value from the input element. Double.NaN is used if the return value is null.
          * @return this instance for method chaining
          */
         public Collector<T> addColumn(String columnName, Function<T, Number> columnGetter)
         {
-            functions.put(columnName, x -> {
+            if (columnName == null)
+                throw new IllegalArgumentException("columnName is null");
+            if (columnGetter == null)
+                throw new IllegalArgumentException("columnGetter is null");
+
+            functions.put(columnName, x ->
+            {
                 Number v = columnGetter.apply(x);
-                if(v == null)
+                if (v == null)
                     v = Double.NaN;
                 return v.doubleValue();
             });
@@ -837,48 +946,50 @@ public class Dataframe implements Serializable, Cloneable
         }
 
         @Override
-        public Supplier<List<Map<String, Double>>> supplier()
+        public Supplier<Dataframe> supplier()
         {
-            return ArrayList::new;
+            return Dataframe::new;
         }
 
         @Override
-        public BiConsumer<List<Map<String, Double>>, T> accumulator()
+        public BiConsumer<Dataframe, T> accumulator()
         {
             return (acc, data) ->
             {
                 Map<String, Double> row = functions.keySet()
                         .stream()
-                        .collect(Collectors.toMap(k -> k, k -> functions.get(k).apply(data)));
-                acc.add(row);
+                        .collect(Collectors.toMap(
+                                k -> k,
+                                k -> functions.get(k).applyAsDouble(data),
+                                (a, b) -> a,
+                                LinkedHashMap::new
+                        ));
+                acc.append(row);
             };
         }
 
         @Override
-        public BinaryOperator<List<Map<String, Double>>> combiner()
+        public BinaryOperator<Dataframe> combiner()
         {
             return (acc0, acc1) ->
             {
-                acc0.addAll(acc1);
+                acc0.data.addAll(acc1.data);
                 return acc0;
             };
         }
 
         @Override
-        public Function<List<Map<String, Double>>, Dataframe> finisher()
+        public Function<Dataframe, Dataframe> finisher()
         {
-            return data ->
-            {
-                Dataframe dataframe = new Dataframe();
-                dataframe.data = data;
-                return dataframe;
-            };
+            return dataframe -> dataframe;
         }
 
         @Override
         public Set<Characteristics> characteristics()
         {
-            return new HashSet<>();
+            HashSet<Characteristics> characteristics = new HashSet<>();
+            characteristics.add(Characteristics.IDENTITY_FINISH);
+            return characteristics;
         }
     }
 }

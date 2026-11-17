@@ -108,8 +108,8 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
             throw new IllegalArgumentException("valueMap is null");
 
         Series series = new Series();
-        IntStream.range(0, series.size())
-                .mapToDouble(idx -> valueMap.applyAsDouble(series, idx))
+        IntStream.range(0, size())
+                .mapToDouble(idx -> valueMap.applyAsDouble(this, idx))
                 .forEach(series::add);
         return series;
     }
@@ -658,9 +658,12 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     }
 
     private static int maxPrintedValues = 30;
+    private static int printedValuesLength = 12;
 
     /**
-     * Sets the maximum number of printed values when calling {@link #print()}
+     * Sets the maximum number of printed values when calling {@link #print()}.
+     * If the size of the series is greater than this value, middle values are skipped and only the head and tail is printed.
+     * Default is 30.
      * @param n number of values to print
      */
     public static void setMaxPrintedValues(int n)
@@ -671,13 +674,27 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     }
 
     /**
+     * Sets the length (number of characters) of the printed values when calling {@link #print()}.
+     * Default is 12.
+     *
+     * @param n length of printed values
+     */
+    public static void setPrintedValuesLength(int n)
+    {
+        if (n <= 0)
+            throw new IllegalArgumentException("n must be > 0");
+        printedValuesLength = n;
+    }
+
+    /**
      * Prints the contents of the series to the standard output.
      */
     public void print()
     {
+        String formatString = "%" + printedValuesLength + ".3f";
         if(size() <= maxPrintedValues)
         {
-            String printString = stream().map(v -> String.format(Locale.US, "%.2f", v)).collect(Collectors.joining(", ", "[", "]"));
+            String printString = stream().map(v -> String.format(Locale.US, formatString, v)).collect(Collectors.joining(",", "[", "]"));
             System.out.println(printString);
         }
         else
@@ -686,8 +703,8 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
             Series tail = tail(maxPrintedValues / 2);
             String printString = String.format(
                     "[%s, ..., %s]",
-                    head.stream().map(v -> String.format(Locale.US, "%.2f", v)).collect(Collectors.joining(", ")),
-                    tail.stream().map(v -> String.format(Locale.US, "%.2f", v)).collect(Collectors.joining(", "))
+                    head.stream().map(v -> String.format(Locale.US, formatString, v)).collect(Collectors.joining(",")),
+                    tail.stream().map(v -> String.format(Locale.US, formatString, v)).collect(Collectors.joining(","))
             );
             System.out.println(printString);
         }

@@ -3,9 +3,7 @@ package io.github.lightdataframe.lightweightdataframe.tests;
 import io.github.lightdataframe.lightweightdataframe.Dataframe;
 import io.github.lightdataframe.lightweightdataframe.Series;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class TestUtil
 {
@@ -26,7 +24,7 @@ public class TestUtil
     {
         Dataframe df = new Dataframe();
         for(int i = 0; i < n; i ++)
-            df.append(true, randomRow());
+            df.append(randomRow());
         return df;
     }
 
