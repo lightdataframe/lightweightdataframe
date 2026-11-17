@@ -503,7 +503,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
         double n = size();
         if(n == 0)
             return Double.NaN;
-        return stream().mapToDouble(x -> Math.pow(x - mean, 2) / n).sum();
+        return stream().mapToDouble(x -> Math.pow(x - mean, 2) / n).average().orElse(Double.NaN);
     }
 
     /**
