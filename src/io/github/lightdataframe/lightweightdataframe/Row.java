@@ -194,10 +194,4 @@ public class Row implements Map<String, Double>
         Row row1 = (Row) o;
         return Objects.equals(row, row1.row);
     }
-
-    @Override
-    public int hashCode()
-    {
-        return row.hashCode();
-    }
 }

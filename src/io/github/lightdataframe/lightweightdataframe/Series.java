@@ -31,7 +31,6 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     {
         if(list == null)
             throw new IllegalArgumentException("list is null");
-
         addAll(list);
     }
 
@@ -56,7 +55,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
 
         while(n > 0 && from.size() > 0)
         {
-            int idx = (int)Math.floor(Math.random() * from.size());
+            int idx = (int) Math.floor(Math.random() * from.size());
             sample.add(from.get(idx));
             if(!replacement)
                 from.remove(idx);
@@ -82,12 +81,18 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
         if(groupFunction == null)
             throw new IllegalArgumentException("groupFunction is null");
 
-        List<Double> groups = stream().mapToDouble(groupFunction).boxed().distinct().collect(Collectors.toList());
+        List<Double> groups = stream()
+                .mapToDouble(groupFunction)
+                .boxed()
+                .distinct()
+                .collect(Collectors.toList());
 
-        Map<Double, Series> result = new HashMap<>();
+        Map<Double, Series> result = new LinkedHashMap<>();
         for (Double group : groups)
         {
-            Series series = stream().filter(v -> groupFunction.applyAsDouble(v) == group).collect(collector(v -> v));
+            Series series = stream()
+                    .filter(v -> groupFunction.applyAsDouble(v) == group)
+                    .collect(collector(v -> v));
             result.put(group, series);
         }
 
@@ -244,7 +249,9 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
         if(c == null)
             throw new IllegalArgumentException("c is null");
 
-        c = c.stream().map(v -> v == null ? Double.NaN : v).collect(Collectors.toList());
+        c = c.stream()
+                .map(v -> v == null ? Double.NaN : v)
+                .collect(Collectors.toList());
         return super.addAll(c);
     }
 
@@ -261,7 +268,9 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
         if(c == null)
             throw new IllegalArgumentException("c is null");
 
-        c = c.stream().map(v -> v == null ? Double.NaN : v).collect(Collectors.toList());
+        c = c.stream()
+                .map(v -> v == null ? Double.NaN : v)
+                .collect(Collectors.toList());
         return super.addAll(index, c);
     }
 
@@ -431,7 +440,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     }
 
     /**
-     * Calculates the dot product of the current series with the given series.
+     * Calculates the dot product of the current series with another series.
      *
      * @param other the series to compute the dot product with
      * @return the resulting dot product as a double value
@@ -440,6 +449,8 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     {
         if(other == null)
             throw new IllegalArgumentException("other is null");
+        if(size() != other.size())
+            throw new IllegalArgumentException("series must have the same size");
 
         return zip(other, (a, b) -> a * b).sum();
     }
@@ -503,7 +514,9 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
         double n = size();
         if(n == 0)
             return Double.NaN;
-        return stream().mapToDouble(x -> Math.pow(x - mean, 2) / n).average().orElse(Double.NaN);
+        return stream()
+                .mapToDouble(x -> Math.pow(x - mean, 2) / n)
+                .sum();
     }
 
     /**
@@ -623,7 +636,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     }
 
     /**
-     * Checks equality with another series. Returns true if the other object is a Series and the elements are the same
+     * Compares the specified object with this list for equality. See {@link List#equals(Object)}.
      *
      * @param o the object to be compared for equality with
      * @return true if the objects are equal, false otherwise
@@ -631,7 +644,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     @Override
     public boolean equals(Object o)
     {
-        return getClass().equals(o.getClass()) && super.equals(o);
+        return super.equals(o);
     }
 
     /**
@@ -739,13 +752,14 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
      */
     public static Series range(double from, double to, double step)
     {
-        if (from > to)
+        if(from > to)
             throw new IllegalArgumentException("from must be less than to");
         if(step <= 0)
             throw new IllegalArgumentException("step must be greater than 0");
+        if(Double.isNaN(from) || Double.isNaN(to) || Double.isNaN(step))
+            throw new IllegalArgumentException("from, to, and step must be finite");
 
         Series series = new Series();
-
 
 
         BigDecimal d = BigDecimal.valueOf(from);
