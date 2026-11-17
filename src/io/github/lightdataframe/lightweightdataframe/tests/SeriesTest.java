@@ -311,6 +311,10 @@ class SeriesTest
         Series range = Series.range(0, 0.1, 0.001);
         assertEquals(100, range.size());
         assertEquals(5, Series.range(0, 5, 1).size());
+
+        range = Series.range(0, 100, 1);
+        assertEquals(100, range.size());
+
     }
 
     @Test

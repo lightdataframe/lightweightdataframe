@@ -583,14 +583,14 @@ public class Dataframe implements Serializable, Cloneable
         return df;
     }
 
-    private static int maxPrintedRows = 13;
+    private static int maxPrintedRows = 16;
 
     private static int printedValuesLength = 20;
 
     /**
-     * Sets the maximum number of row printed when calling {@link #print()}
-     * If the number of rows is greater than this value, middle values are skipped and only the head and tail is printed
-     * Default is 13.
+     * Sets the maximum number of rows printed when calling {@link #print()}
+     * If the number of rows is greater than this value, middle values are skipped and only the head and tail are printed.
+     * Default is 16.
      * @param n maximum number of rows to print. Must be >= 0
      */
     public static void setMaxPrintedRows(int n)
@@ -601,7 +601,7 @@ public class Dataframe implements Serializable, Cloneable
     }
 
     /**
-     * Sets the length (number of characters) of the printed values when calling {@link #print()}. Default is 12.
+     * Sets the length (number of characters) of the printed values when calling {@link #print()}. Default is 20.
      *
      * @param n length of printed values
      */
@@ -620,30 +620,31 @@ public class Dataframe implements Serializable, Cloneable
         String formatString = "%" + printedValuesLength + "s";
         StringBuilder sb = new StringBuilder();
         List<String> columns = getColumns();
-        buildHeader(sb, columns);
+        buildHeader(sb, false, columns);
         if (size() <= maxPrintedRows)
         {
             for (Map<String, Double> row : data)
-                buildLine(sb, "", row);
+                buildLine(sb, null, row);
         } else
         {
-            List<Map<String, Double>> head = data.stream()
-                    .limit(maxPrintedRows / 2)
-                    .collect(Collectors.toList());
-            for (Map<String, Double> row : head)
-                buildLine(sb, "", row);
 
-            sb.append(String.format(formatString, ""));
+            List<Map<String, Double>> head = IntStream.range(0, maxPrintedRows / 2)
+                    .mapToObj(i -> data.get(i))
+                    .collect(Collectors.toList());
+
+
+            for (Map<String, Double> row : head)
+                buildLine(sb, null, row);
+
             columns.forEach(col -> sb.append(String.format(formatString, "...")));
             sb.append("\n");
 
-            List<Map<String, Double>> tail = data.stream()
-                    .sorted(Comparator.comparingInt(row -> -data.indexOf(row)))
-                    .limit(maxPrintedRows / 2)
+            List<Map<String, Double>> tail = IntStream.range(data.size() - maxPrintedRows / 2, data.size())
+                    .mapToObj(i -> data.get(i))
                     .collect(Collectors.toList());
-            tail.sort(Comparator.comparingInt(row -> -tail.indexOf(row)));
+
             for (Map<String, Double> row : tail)
-                buildLine(sb, "", row);
+                buildLine(sb, null, row);
         }
         System.out.print(sb);
     }
@@ -659,7 +660,7 @@ public class Dataframe implements Serializable, Cloneable
 
         Dataframe stats = statistics();
 
-        buildHeader(sb, stats.getColumns());
+        buildHeader(sb, true, stats.getColumns());
 
         if (size() == 0)
             buildLine(sb, "", stats.getRow(0));
@@ -673,12 +674,13 @@ public class Dataframe implements Serializable, Cloneable
     /*
     Builds the header of the dataframe for print methods.
      */
-    private void buildHeader(StringBuilder sb, List<String> columns)
+    private void buildHeader(StringBuilder sb, boolean spaced, List<String> columns)
     {
         String formatString = "%" + printedValuesLength + "s";
-        sb.append(String.format(formatString, ""));
+        if(spaced)
+            sb.append(String.format(Locale.US, formatString, ""));
         for (String col : columns)
-            sb.append(String.format(formatString, col));
+            sb.append(String.format(Locale.US, formatString, col));
         sb.append("\n");
     }
 
@@ -689,9 +691,10 @@ public class Dataframe implements Serializable, Cloneable
     {
         String columnFormatString = "%" + printedValuesLength + "s";
         String numberFormatString = "%" + printedValuesLength + ".3f";
-        sb.append(String.format(columnFormatString, columnName));
+        if(columnName != null)
+            sb.append(String.format(Locale.US, columnFormatString, columnName));
         for (Double cval : row.values())
-            sb.append(String.format(numberFormatString, cval));
+            sb.append(String.format(Locale.US, numberFormatString, cval));
         sb.append("\n");
     }
 
@@ -729,7 +732,7 @@ public class Dataframe implements Serializable, Cloneable
      *
      * @param ascending true if the rows should be sorted in ascending order, false for descending order
      * @param scorer    the scorer to use for sorting the rows
-     * @return this instance with sorted rows
+     * @return a new dataframe instance with sorted rows
      */
     public Dataframe sort(boolean ascending, RowScorer scorer)
     {
@@ -738,13 +741,14 @@ public class Dataframe implements Serializable, Cloneable
 
         double dir = ascending ? 1 : -1;
 
-        data = IntStream.range(0, size())
+        Dataframe sorted = new Dataframe();
+        sorted.data = IntStream.range(0, size())
                 .boxed()
                 .sorted(Comparator.comparingDouble(n -> dir * scorer.getRowScore(this, n)))
                 .map(n -> data.get(n))
                 .collect(Collectors.toList());
 
-        return this;
+        return sorted;
     }
 
     /**
@@ -808,19 +812,19 @@ public class Dataframe implements Serializable, Cloneable
      * See {@link Filter} for common filtering strategies.
      *
      * @param filter filter to use for filtering the rows
-     * @return this instance with only the filtered rows
+     * @return a new dataframe instance with only the filtered rows
      */
     public Dataframe filter(RowFilter filter)
     {
         if (filter == null)
             throw new IllegalArgumentException("filter is null");
-
-        data = IntStream.range(0, size())
+        Dataframe filtered = new Dataframe();
+        filtered.data = IntStream.range(0, size())
                 .filter(n -> filter.testRow(this, n))
                 .mapToObj(n -> data.get(n))
                 .collect(Collectors.toList());
 
-        return this;
+        return filtered;
     }
 
     /**
@@ -828,33 +832,40 @@ public class Dataframe implements Serializable, Cloneable
      * See {@link Filter} for common filtering strategies.
      *
      * @param filter filter to match rows to drop
-     * @return this instance without the dropped rows
+     * @return a new dataframe instance without the dropped rows
      */
     public Dataframe drop(RowFilter filter)
     {
         if (filter == null)
             throw new IllegalArgumentException("filter is null");
 
-        data = IntStream.range(0, size())
+        Dataframe filtered = new Dataframe();
+        filtered.data = IntStream.range(0, size())
                 .filter(i -> !filter.testRow(this, i))
                 .mapToObj(i -> data.get(i))
                 .collect(Collectors.toList());
 
-        return this;
+        return filtered;
     }
 
     /**
      * Aggregates the dataframe rows by the given {@link Aggregator}.<br>
      *
      * @param aggregator aggregator to use for aggregating the rows
-     * @return a single map containing the aggregated values
+     * @return a new dataframe instance with a single row containing the aggregated values
      */
-    public Map<String, Double> aggregate(Aggregator aggregator)
+    public Dataframe aggregate(Aggregator aggregator)
     {
         if (aggregator == null)
             throw new IllegalArgumentException("aggregator is null");
 
-        return aggregator.aggregate(this);
+        Dataframe aggregated = new Dataframe();
+
+        List<Map<String, Double>> data = new ArrayList<>();
+        data.add(aggregator.aggregate(this));
+        aggregated.data = data;
+
+        return aggregated;
     }
 
     /**
@@ -862,7 +873,7 @@ public class Dataframe implements Serializable, Cloneable
      *
      * @param grouper    grouper to group the rows by
      * @param aggregator aggregator to use for aggregating the rows in each group
-     * @return a new dataframe containing the aggregated values for each group
+     * @return a new dataframe instance containing the aggregated values for each group
      */
     public Dataframe groupAggregate(RowGrouper grouper, Aggregator aggregator)
     {
@@ -873,14 +884,14 @@ public class Dataframe implements Serializable, Cloneable
 
         Map<Object, Dataframe> groups = group(grouper);
 
-        List<Map<String, Double>> aggregated = groups.values()
+        List<Map<String, Double>> data = groups.values()
                 .stream()
                 .map(aggregator::aggregate)
                 .collect(Collectors.toList());
 
-        Dataframe df = new Dataframe();
-        df.data = aggregated;
-        return df;
+        Dataframe aggregated = new Dataframe();
+        aggregated.data = data;
+        return aggregated;
     }
 
     /**

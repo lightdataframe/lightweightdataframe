@@ -662,7 +662,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
 
     /**
      * Sets the maximum number of printed values when calling {@link #print()}.
-     * If the size of the series is greater than this value, middle values are skipped and only the head and tail is printed.
+     * If the size of the series is greater than this value, middle values are skipped and only the head and tail are printed.
      * Default is 30.
      * @param n number of values to print
      */

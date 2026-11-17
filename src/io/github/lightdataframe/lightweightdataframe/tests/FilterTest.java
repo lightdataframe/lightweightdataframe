@@ -5,8 +5,7 @@ import io.github.lightdataframe.lightweightdataframe.Filter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -44,15 +43,15 @@ public class FilterTest
     @Test
     public void testRowTest()
     {
-        df.filter(Filter.rowTest(row -> Double.isNaN(row.get("col1"))));
-        assertTrue(df.getColumn("col1").all(v -> Double.isNaN(v)));
+        Dataframe df0 = df.filter(Filter.rowTest(row -> Double.isNaN(row.get("col1"))));
+        assertTrue(df0.getColumn("col1").all(v -> Double.isNaN(v)));
     }
 
     @Test
     void valueTest()
     {
-        df.filter(Filter.valueTest("col1", v -> v > 0));
-        assertTrue(df.getRows().stream().allMatch(r -> r.get("col1") > 0));
+        Dataframe df0 = df.filter(Filter.valueTest("col1", v -> v > 0));
+        assertTrue(df0.getRows().stream().allMatch(r -> r.get("col1") > 0));
     }
 
     @Test
@@ -61,7 +60,18 @@ public class FilterTest
         Map<String, Double> values = new LinkedHashMap<>();
         values.put("col0", null);
 
-        df.filter(Filter.valuesMatch(values));
-        assertTrue(df.getRows().stream().allMatch(r -> Double.isNaN(r.get("col0"))));
+        Dataframe df0 = df.filter(Filter.valuesMatch(values));
+        assertTrue(df0.getRows().stream().allMatch(r -> Double.isNaN(r.get("col0"))));
+    }
+
+    @Test
+    void invalidInput()
+    {
+        assertThrows(IllegalArgumentException.class, () -> Filter.valueTest(null, v -> v > 0));
+        assertThrows(IllegalArgumentException.class, () -> Filter.valueTest("col0", null));
+        assertThrows(IllegalArgumentException.class, () -> df.filter(Filter.valueTest("invalid_col", v -> v > 0)));
+        Map<String, Double> invalidValues = new LinkedHashMap<>();
+        invalidValues.put("invalid_col", null);
+        assertThrows(IllegalArgumentException.class, () -> df.filter(Filter.valuesMatch(invalidValues)));
     }
 }

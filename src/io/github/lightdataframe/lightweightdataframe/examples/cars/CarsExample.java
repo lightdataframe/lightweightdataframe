@@ -75,10 +75,6 @@ public class CarsExample
                 .addAggregation("year", d -> d.getColumn("year").first())
                 .addAggregation("count", d -> d.size());
 
-        Map<String, Double> ar = new HashMap<>();
-
-        ar = df.aggregate(aggr);
-
         df0 = df.groupAggregate(
                 Grouper.groupByColumnValues("manufacturer", "year"),
                 aggr

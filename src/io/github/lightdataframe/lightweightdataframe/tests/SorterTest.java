@@ -1,12 +1,12 @@
 package io.github.lightdataframe.lightweightdataframe.tests;
 
 import io.github.lightdataframe.lightweightdataframe.Dataframe;
-import io.github.lightdataframe.lightweightdataframe.Series;
 import io.github.lightdataframe.lightweightdataframe.Sorter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+
 
 
 
@@ -21,14 +21,11 @@ public class SorterTest
     }
 
 
-
     @Test
     public void sortByColumns()
     {
         Dataframe df0 = df.clone();
         df0.sort(false, Sorter.sortByColumns(true, "col5", "col2"));
-        Series.setMaxPrintedValues(200);
-        Series.setPrintedValuesLength(9);
         df0.getColumn("col5").print();
         df0.getColumn("col2").print();
     }
@@ -54,8 +51,7 @@ public class SorterTest
     @Test
     public void shuffleTest()
     {
-        Dataframe sorted = df.clone();
-        sorted.sort(true, Sorter.shuffle());
+        Dataframe sorted = df.sort(true, Sorter.shuffle());
 
         assertNotEquals(df.getRows(), sorted.getRows());
     }

@@ -56,11 +56,10 @@ public class PersonExample
 
         // ---- Sorting ----
 
-        Dataframe sorted = df.clone();
 
-        sorted.sort(true, Sorter.sortByRow(age -> age.get(AGE)));
+        Dataframe sorted = df.sort(true, Sorter.sortByRow(age -> age.get(AGE)));
 
-        sorted.sort(true, Sorter.shuffle());
+        Dataframe shuffled = sorted.sort(true, Sorter.shuffle());
 
 
         // ---- Grouping ----
@@ -72,13 +71,12 @@ public class PersonExample
 
         // ---- Filtering ----
 
-        Dataframe filtered = df.clone();
 
-        Dataframe between = filtered.filter(Filter.between(3, 6));
-        Dataframe head = filtered.filter(Filter.head(2));
-        Dataframe tail = filtered.filter(Filter.tail(2));
+        Dataframe between = df.filter(Filter.between(3, 6));
+        Dataframe head = df.filter(Filter.head(2));
+        Dataframe tail = df.filter(Filter.tail(2));
 
-        Dataframe filteredByAge = filtered.filter(Filter.rowTest(row -> row.get(AGE) >= 30));
+        Dataframe filteredByAge = df.filter(Filter.rowTest(row -> row.get(AGE) >= 30));
 
 
         // ---- Aggregation ----

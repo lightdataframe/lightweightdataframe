@@ -19,7 +19,7 @@ public class Filter
      * @return a row filter that retains only the rows passing the test
      */
     public static RowFilter valueTest(String column, Predicate<Double> valueTest)
-    {
+        {
         if(column == null)
             throw new IllegalArgumentException("column is null");
         if(valueTest == null)

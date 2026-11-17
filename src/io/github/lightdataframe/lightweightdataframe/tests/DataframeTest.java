@@ -168,16 +168,30 @@ public class DataframeTest
         assertThrows(IllegalArgumentException.class, () -> df.append(Collections.singletonMap("col0", 0d)));
 
         //Valid
-        testRow = new LinkedHashMap<>(df.getRow(0));
+        testRow = new HashMap<>(df.getRow(0));
         testRow.put("col6", 1d);
         df.append(testRow);
         assertEquals(1001, df.size());
-
         df.setColumn("col0", df.getColumn("col0").map(v -> v + 1));
-
         df.append(testRow);
         assertEquals(1002, df.size());
     }
+
+    @Test
+    void append2()
+    {
+        Dataframe df = TestUtil.randomDataframe(200);
+        Row r0 = df.getRow(0);
+        df = df.sort(true, Sorter.shuffle());
+
+        df.append(r0);
+        assertEquals(201, df.size());
+        assertEquals(r0, df.getRow(200));
+
+        df.print();
+    }
+
+
     @Test
     void insert()
     {
@@ -251,12 +265,13 @@ public class DataframeTest
     void print()
     {
         Dataframe df = TestUtil.randomDataframe(1000);
+        df.print();
         Dataframe.setMaxPrintedRows(0);
         df.print();
         Dataframe.setMaxPrintedRows(10);
         df.print();
-
     }
+
 
     @Test
     void setWithColumnN()
@@ -320,9 +335,11 @@ public class DataframeTest
         Dataframe df = TestUtil.randomDataframe(1000);
 
         assertEquals(6, df.statistics().size());
+        df.printStatistics();
 
         Dataframe df0 = new Dataframe();
         assertEquals(1, df0.statistics().size());
+        df0.printStatistics();
     }
 
     @Test
@@ -349,5 +366,64 @@ public class DataframeTest
         df.append(df.getRow(0));
         df.sort(true, s1).print();
 
+    }
+
+
+    @Test
+    void find()
+    {
+        Dataframe df = TestUtil.randomDataframe(1000);
+        List<Integer> ids = df.find(Filter.rowTest(row -> Double.isNaN(row.get("col0"))));
+        for(Integer id : ids)
+            assertTrue(Double.isNaN(df.getRow(id).get("col0")));
+        int n = 10;
+        ids = df.find(Filter.rowTest(row -> row.equals(df.getRow(n))));
+        assertEquals(Collections.singletonList(n), ids);
+
+
+        df.set(10, 1000);
+        df.set(50, 1000);
+        ids = df.find(Filter.rowTest(row -> row.equals(df.getRow(10))));
+        assertEquals(Arrays.asList(10, 50), ids);
+    }
+    @Test
+    void group()
+    {
+        Dataframe df = TestUtil.randomDataframe(1000);
+        Map<Object, Dataframe> groups = df.group(Grouper.groupByColumnValues("col0"));
+
+        assertTrue(groups.size() <= 1000);
+
+        for(Object key : groups.keySet())
+        {
+            Dataframe df1 = groups.get(key);
+            assertTrue(df1.getColumn("col0").all(v -> v.equals(df1.get("col0", 0))));
+        }
+
+    }
+
+    @Test
+    void group2()
+    {
+        Dataframe df = TestUtil.randomDataframe(1000);
+        RowGrouper g = Grouper.groupByRow(row -> row.get("col0") > 0);
+
+        Map<Object, Dataframe> groups = df.group(g);
+
+        assertTrue(groups.get(true).getColumn("col0").withoutNan().all(v -> v > 0));
+        assertTrue(groups.get(false).getColumn("col0").withoutNan().all(v -> v <= 0));
+    }
+    @Test
+    void aggregate()
+    {
+        Dataframe df = TestUtil.randomDataframe(1000);
+        Dataframe agg = df.aggregate(
+                new Aggregator()
+                .addAggregation("sum4", df0 -> df0.getColumn("col4").withoutNan().sum())
+                        .addAggregation("sum5", df0 -> df0.getColumn("col5").withoutNan().sum())
+        );
+        assertEquals(1, agg.size());
+        assertEquals(2, agg.getColumns().size());
+        agg.print();
     }
 }

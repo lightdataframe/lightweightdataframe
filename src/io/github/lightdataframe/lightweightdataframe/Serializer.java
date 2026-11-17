@@ -148,21 +148,31 @@ public class Serializer
 
     private static String columnsRowsJson(Dataframe df)
     {
+        String columns = df.getColumns()
+                .stream()
+                .map(col -> "\"" + col + "\"")
+                .collect(Collectors.joining(", ", "[", "],"));
         return "{" +
-                "\"columns\": " + df.getColumns().stream().map(col -> "\"" + col + "\"").collect(Collectors.joining(", ", "[", "],")) +
+                "\"columns\": " + columns +
                 "\"rows\": " + rowsJson(df) +
                 "}";
     }
 
     private static String rowsJson(Dataframe df)
     {
-        return df.data.stream().map(Serializer::rowToJson).collect(Collectors.joining(",", "[", "]"));
+        return df.data.stream()
+                .map(Serializer::rowToJson)
+                .collect(Collectors.joining(",", "[", "]"));
     }
 
     private static String rowToJson(Map<String, Double> row)
     {
         return row.entrySet().stream()
-                .map(e -> String.format(Locale.US, "\"%s\": %s", e.getKey(), e.getValue()))
+                .map(e -> {
+                    Double v = e.getValue();
+                    String s = v == null || Double.isNaN(v) ? "\"NaN\"" : v.toString();
+                    return String.format(Locale.US, "\"%s\": %s", e.getKey(), s);
+                })
                 .collect(Collectors.joining(",", "{", "}"));
     }
 
@@ -192,7 +202,7 @@ public class Serializer
             case COLUMNS_ROWS:
                 return fromJsonColumnsRows(json);
             default:
-                throw new IllegalArgumentException("Invalid JsonFormat");
+                throw new IllegalArgumentException("invalid json format");
         }
     }
 
@@ -206,8 +216,7 @@ public class Serializer
             {
                 Map<String, Double> row = new LinkedHashMap<>();
                 JSONObject jobj = jarr.getJSONObject(i);
-                List<String> sortedKeys = jobj.keySet().stream().sorted().collect(Collectors.toList());
-                for(String key : sortedKeys)
+                for(String key : jobj.keySet())
                 {
                     double v = jobj.isNull(key) ? Double.NaN : jobj.getDouble(key);
                     row.put(key, v);
@@ -217,7 +226,7 @@ public class Serializer
         }
         catch (Exception e)
         {
-            throw new IllegalArgumentException("Invalid Json");
+            throw new IllegalArgumentException("invalid json");
         }
 
         return df;
@@ -229,9 +238,8 @@ public class Serializer
         try
         {
             JSONObject jobj = new JSONObject(json);
-            List<String> sortedKeys = jobj.keySet().stream().sorted().collect(Collectors.toList());
 
-            for(String key : sortedKeys)
+            for(String key : jobj.keySet())
             {
                 JSONArray jarr = jobj.getJSONArray(key);
                 List<Double> columnValues = new ArrayList<>();
@@ -300,9 +308,14 @@ public class Serializer
         if(series == null)
             throw new IllegalArgumentException("series is null");
 
-        return "[" +
-                series. stream().map(v -> String.format(Locale.US, "%s", v)).collect(Collectors.joining(",")) +
-                "]";
+        String values = series.stream()
+                .map(v -> {
+                    String s = v == null || Double.isNaN(v) ? "\"NaN\"" : v.toString();
+                    return String.format(Locale.US, "%s", s);
+                })
+                .collect(Collectors.joining(","));
+
+        return "[" + values + "]";
     }
 
 

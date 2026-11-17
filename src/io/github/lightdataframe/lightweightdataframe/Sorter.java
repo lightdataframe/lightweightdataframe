@@ -2,6 +2,8 @@ package io.github.lightdataframe.lightweightdataframe;
 
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.ToDoubleFunction;
@@ -136,6 +138,10 @@ public class Sorter
      */
     public static RowScorer shuffle()
     {
-        return  (df, n) -> Math.random();
+        Map<Integer, Double> scores = new HashMap<>();
+        return  (df, n) -> {
+            scores.putIfAbsent(n, Math.random());
+            return scores.get(n);
+        };
     }
 }
