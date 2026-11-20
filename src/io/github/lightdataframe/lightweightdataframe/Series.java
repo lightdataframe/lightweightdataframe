@@ -25,14 +25,14 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
 
     /**
      * Constructs a new series instance with the specified collection of numerical values.
-     * @param list A collection of Double values to initialize the series with. Cannot be null.
+     * @param collection A collection of Double values to initialize the series with. Cannot be null.
      *             Null values are replaced with {@code Double.NaN}
      */
-    public Series(Collection<Double> list)
+    public Series(Collection<Double> collection)
     {
-        if(list == null)
-            throw new IllegalArgumentException("list is null");
-        addAll(list);
+        if(collection == null)
+            throw new IllegalArgumentException("collection is null");
+        addAll(collection);
     }
 
     /**
@@ -91,9 +91,11 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
         Map<Double, Series> result = new LinkedHashMap<>();
         for (Double group : groups)
         {
-            Series series = stream()
+            Series series = new Series(
+                    stream()
                     .filter(v -> groupFunction.applyAsDouble(v) == group)
-                    .collect(collector(v -> v));
+                    .collect(Collectors.toList())
+            );
             result.put(group, series);
         }
 
@@ -287,6 +289,8 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     {
         double mean = average();
         double std = std();
+        if(std == 0)
+            return map(v -> 0);
         return map(v -> (v - mean) / std);
     }
 
@@ -302,6 +306,8 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     {
         double min = min();
         double max = max();
+        if(min == max)
+            return map(v -> 0);
         return map(v -> (v - min) / (max - min));
     }
 
@@ -448,9 +454,9 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
      */
     public double dot(Series other)
     {
-        if(other == null)
+        if (other == null)
             throw new IllegalArgumentException("other is null");
-        if(size() != other.size())
+        if (size() != other.size())
             throw new IllegalArgumentException("series must have the same size");
 
         return zip(other, (a, b) -> a * b).sum();
