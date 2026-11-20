@@ -1,6 +1,8 @@
 package io.github.lightdataframe.lightweightdataframe;
 
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -77,6 +79,37 @@ public class Filter
     }
 
 
+    /**
+     * Strategy to retain only rows with at least one nan value in the specified columns.
+     * If no columns are specified, all columns are checked.
+     *
+     * @param columns columns to check for nan values, or empty array to check all columns
+     * @return a row filter that retains only rows with at least one nan value in the specified columns
+     */
+    public static RowFilter hasNan(String...columns)
+    {
+        List<String> columnsList = Arrays.asList(columns);
+        return (df, i) ->
+        {
+            if (!df.getColumns().containsAll(columnsList))
+                throw new IllegalArgumentException("one or more columns not found: [" + String.join(", ", Arrays.asList(columns)) + "] in [" + String.join(", ", df.getColumns()) + "]");
+
+            Map<String, Double> row = df.getRow(i);
+
+            if (columns.length > 0)
+                for (String col : columns)
+                {
+                    double value = row.get(col);
+                    if (Double.isNaN(value))
+                        return true;
+                }
+            else
+                for (double v : row.values())
+                    if (Double.isNaN(v))
+                        return true;
+            return false;
+        };
+    }
 
     /**
      * Strategy to retain only the first {@code n} rows (head) of the dataframe

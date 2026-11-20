@@ -2,6 +2,7 @@ package io.github.lightdataframe.lightweightdataframe;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.function.*;
 import java.util.stream.Collectors;
@@ -512,11 +513,42 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     {
         double mean = average();
         double n = size();
+
         if(n == 0)
             return Double.NaN;
-        return stream()
-                .mapToDouble(x -> Math.pow(x - mean, 2) / n)
-                .sum();
+
+        double sum = stream().mapToDouble(x -> Math.pow(x - mean, 2)).sum();
+        return sum / n;
+    }
+
+    /**
+     * Computes and returns the sample variance of the numerical values in the series.
+     * The sample variance is calculated as the sum of the squared differences from the mean divided by n - 1.
+     * If the series size is < 2 or has nan values, the method returns {@code Double.NaN}.
+     * @return the sample variance of the series as a double. If the series size is < 2 or has nan values,
+     *         the method returns {@code Double.NaN}.
+     */
+    public double sampleVar()
+    {
+        double mean = average();
+        double n = size();
+
+        if(n < 2)
+            return Double.NaN;
+
+        double sum = stream().mapToDouble(x -> Math.pow(x - mean, 2)).sum();
+        return sum / (n - 1);
+    }
+
+    /**
+     * Computes and returns the sample standard deviation of the numerical values in the series.
+     * It is the square root of the sample variance.
+     *
+     * @return the sample standard deviation. If the series size is < 2 or has nan values {@code Double.NaN} is returned.
+     */
+    public double sampleStd()
+    {
+        return Math.sqrt(sampleVar());
     }
 
     /**
@@ -582,7 +614,8 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     }
 
     /**
-     * Returns the percentile of a given value, or {@code Double.NaN} if the series is empty.
+     * Returns the percentile of a given value, calculated as the percentage of elements that are less or equal to it.
+     * If the series is empty {@code Double.NaN} is returned.
      * @param value value to find the percentile of
      * @return the percentile of a given value
      */
@@ -592,10 +625,40 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
             return Double.NaN;
 
         double lesser = stream()
-                .mapToDouble(aDouble -> aDouble < value ? 1 : 0)
+                .mapToDouble(aDouble -> aDouble <= value ? 1 : 0)
                 .sum();
 
         return lesser / size();
+    }
+
+    /**
+     * Calculates the value at which a given percentile lies. The percentile of a value is the percentage of elements
+     * that are less or equal to it.
+     * For example, {@code percentileValue(0.95)} returns the value of the series having 0.95 elements lesser than it.
+     *
+     * @param percentile percentile to calculate the value for
+     * @return the value for the given percentile. If the series is empty {@code Double.NaN} is returned.
+     */
+    public double percentileValue(double percentile)
+    {
+        if (percentile < 0 || percentile > 1)
+            throw new IllegalArgumentException("percentile must be between 0 and 1");
+
+        if (isEmpty())
+            return Double.NaN;
+
+        Series sorted = sort(v -> v);
+
+        BigDecimal y = new BigDecimal(percentile)  // percentile * size()
+                .multiply(new BigDecimal(size()))
+                .setScale(7, RoundingMode.HALF_DOWN);
+
+        double x = y.doubleValue();
+        if (x == 0)
+            return sorted.get(0);
+        if (x % 1 == 0)
+            return sorted.get((int) (x - 1));
+        return sorted.get((int) (Math.ceil(x) - 1));
     }
 
     /**
@@ -622,6 +685,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     {
         Map<String, Double> stats = new LinkedHashMap<>();
         stats.put("size", (double) size());
+        stats.put("sum", sum());
         stats.put("avg", average());
         stats.put("std", std());
         stats.put("var", var());
@@ -785,6 +849,24 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
         Series series = new Series();
         for(Number n : numbers)
             series.add(n.doubleValue());
+        return series;
+    }
+
+    /**
+     * Returns a series of size {@code size} filled with the specified value.
+     *
+     * @param size  series size
+     * @param value series value
+     * @return a new series filled with the specified value
+     * @throws IllegalArgumentException if {@code size} is negative
+     */
+    public static Series fill(int size, double value)
+    {
+        if (size < 0)
+            throw new IllegalArgumentException("size must be >= 0");
+        Series series = new Series();
+        for (int i = 0; i < size; i++)
+            series.add(value);
         return series;
     }
 

@@ -182,10 +182,10 @@ public class Row implements Map<String, Double>
     }
 
     /**
-     * Two rows are equals if they have the same column values (indices can differ)
+     * Two rows are equals if they have the same columns and values (indices can differ)
      *
      * @param o object to be compared for equality
-     * @return true if the objects are equal, false otherwise
+     * @return true if the objects (rows) are equal, false otherwise
      */
     @Override
     public boolean equals(Object o)

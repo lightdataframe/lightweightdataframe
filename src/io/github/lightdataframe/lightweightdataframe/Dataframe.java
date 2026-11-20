@@ -192,7 +192,7 @@ public class Dataframe implements Serializable, Cloneable
 
     /**
      * Reorders the columns of the dataframe based on the specified column order.
-     * Columns not mentioned in the order will be appended at the end, in the order of the current dataframe's columns.
+     * Columns not mentioned in the order will be appended at the end, in the current column order.
      *
      * @param columns The names of the columns in the desired order. Unspecified columns will be appended afterward
      * @return this instance with the columns rearranged in the specified order
@@ -569,13 +569,18 @@ public class Dataframe implements Serializable, Cloneable
         {
             rows = getColumns()
                     .stream()
-                    .map(column -> getColumn(column).withoutNan().statistics())
+                    .map(column -> {
+                        Map<String, Double> stats = getColumn(column).withoutNan().statistics();
+                        stats.remove("hasNan");
+                        return stats;
+                    })
                     .collect(Collectors.toList());
         } else
         {
             rows = new ArrayList<>();
-            Series s = new Series();
-            rows.add(s.statistics());
+            Map<String, Double> stats = new Series().statistics();
+            stats.remove("hasNan");
+            rows.add(stats);
         }
 
         Dataframe df = new Dataframe();
@@ -585,7 +590,7 @@ public class Dataframe implements Serializable, Cloneable
 
     private static int maxPrintedRows = 16;
 
-    private static int printedValuesLength = 20;
+    private static int printedValuesLength = 18;
 
     /**
      * Sets the maximum number of rows printed when calling {@link #print()}
@@ -601,7 +606,7 @@ public class Dataframe implements Serializable, Cloneable
     }
 
     /**
-     * Sets the length (number of characters) of the printed values when calling {@link #print()}. Default is 20.
+     * Sets the length (number of characters) of the printed values when calling {@link #print()}. Default is 18.
      *
      * @param n length of printed values
      */
@@ -613,7 +618,7 @@ public class Dataframe implements Serializable, Cloneable
     }
 
     /**
-     * Prints to standard output a formatted representation of the dataframe.
+     * Prints to standard output a formatted representation of the dataframe. Prints an empty string if the dataframe is empty.
      */
     public void print()
     {

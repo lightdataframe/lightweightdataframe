@@ -27,6 +27,7 @@ public class Sorter
     {
         if(Arrays.stream(columns).anyMatch(Objects::isNull))
             throw new IllegalArgumentException("One or more columns are null");
+
         AtomicReference<Double> multiplierAbs = new AtomicReference<>(null);
         AtomicReference<Double> min = new AtomicReference<>(null);
         AtomicReference<Double> max = new AtomicReference<>(null);
@@ -93,7 +94,7 @@ public class Sorter
     /**
      * Strategy to score rows by the values of a specific column.
      *
-     * @param nansLast whether NaN values should appear first or last in the sorted list
+     * @param nansLast whether nan values should be scored with minimum (nans last) or maximum (nans first) score
      * @param column   column name to score each row
      * @param scorer   function to apply to each row value to score it
      * @return a row scorer that scores rows based on the values of the specified column
@@ -143,5 +144,21 @@ public class Sorter
             scores.putIfAbsent(n, Math.random());
             return scores.get(n);
         };
+    }
+
+    /**
+     * Strategy to map the score of a row scorer to a new score using the provided function
+     *
+     * @param scorer scorer to map the score of
+     * @param mapper function to map the score
+     * @return a row scorer that maps the score of the provided scorer to a new score using the provided function
+     */
+    public static RowScorer map(RowScorer scorer, ToDoubleFunction<Double> mapper)
+    {
+        if (scorer == null)
+            throw new IllegalArgumentException("scorer is null");
+        if (mapper == null)
+            throw new IllegalArgumentException("mapper is null");
+        return (df, n) -> mapper.applyAsDouble(scorer.getRowScore(df, n));
     }
 }
