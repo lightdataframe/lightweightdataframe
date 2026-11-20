@@ -649,11 +649,11 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
 
         Series sorted = sort(v -> v);
 
-        BigDecimal y = new BigDecimal(percentile)  // percentile * size()
+        BigDecimal rank = new BigDecimal(percentile)  // percentile * size()
                 .multiply(new BigDecimal(size()))
                 .setScale(7, RoundingMode.HALF_DOWN);
 
-        double x = y.doubleValue();
+        double x = rank.doubleValue();
         if (x == 0)
             return sorted.get(0);
         if (x % 1 == 0)
@@ -736,6 +736,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
 
     private static int maxPrintedValues = 30;
     private static int printedValuesLength = 12;
+    private static int printedValuesPrecision = 3;
 
     /**
      * Sets the maximum number of printed values when calling {@link #print()}.
@@ -764,11 +765,23 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     }
 
     /**
+     * Sets the precision (number of decimal places) of the printed values when calling {@link #print()}.
+     *
+     * @param n precision of printed values. Must be >= 0
+     */
+    public static void setPrintedValuesPrecision(int n)
+    {
+        if (n < 0)
+            throw new IllegalArgumentException("n must be >= 0");
+        printedValuesPrecision = n;
+    }
+
+    /**
      * Prints the contents of the series to the standard output.
      */
     public void print()
     {
-        String formatString = "%" + printedValuesLength + ".3f";
+        String formatString = "%" + printedValuesLength + "." + printedValuesPrecision + "f";
         if(size() <= maxPrintedValues)
         {
             String printString = stream().map(v -> String.format(Locale.US, formatString, v)).collect(Collectors.joining(",", "[", "]"));
@@ -779,8 +792,9 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
             Series head = head(maxPrintedValues / 2);
             Series tail = tail(maxPrintedValues / 2);
             String printString = String.format(
-                    "[%s, ..., %s]",
+                    "[%s, %s, %s]",
                     head.stream().map(v -> String.format(Locale.US, formatString, v)).collect(Collectors.joining(",")),
+                    String.format("%" + printedValuesLength + "s", "..."),
                     tail.stream().map(v -> String.format(Locale.US, formatString, v)).collect(Collectors.joining(","))
             );
             System.out.println(printString);

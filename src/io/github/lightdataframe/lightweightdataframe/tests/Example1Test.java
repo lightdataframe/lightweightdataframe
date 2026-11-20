@@ -5,12 +5,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class ExampleTest
+public class Example1Test
 {
     private List<Person> people;
     private Dataframe df;
@@ -244,44 +243,108 @@ public class ExampleTest
         df.setColumn("agePercentile", age.map(v -> age.withoutNan().percentile(v)));
         df.print();
     }
-/*
----
 
-### **Visual Groupings**
-1. **Frequency counts**:
-   - Count the number of people in each age group, weight bucket, or salary bracket.
+    /*
+    ---
 
-2. **Identify outliers**:
-   - Spot anomalies in data, such as:
-     - Extremely high or low weights compared to others.
-     - People with negative favorite numbers.
+    ### **Visual Groupings**
+    1. **Frequency counts**:
+       - Count the number of people in each age group, weight bucket, or salary bracket.
 
----
+    2. **Identify outliers**:
+       - Spot anomalies in data, such as:
+         - Extremely high or low weights compared to others.
+         - People with negative favorite numbers.
 
-### **Transformations**
-1. **Update values conditionally**:
-   - For example:
-     - Set salary to `0` for rows where it is null.
-     - Modify favorite numbers to their absolute values.
+    ---
+    */
 
-2. **Clone and Modify Data**:
-   - Duplicate rows or datasets, and apply custom transformations for analysis.
+    @Test
+    void visualTest()
+    {
+        RowGrouper grouper = Grouper.groupByRow(row -> Math.floor(row.get("age") / 10)); // Buckets
+        Aggregator aggr = new Aggregator()
+                .addAggregation("ageGroup", df -> Math.floor(df.getColumn("age").first() / 10))
+                .addAggregation("count", df -> df.size());
 
----
+        Dataframe groupAggr = df.groupAggregate(grouper, aggr);
+        groupAggr.print();
+        Dataframe df0 = df.drop(Filter.hasNan());
+        df0.setColumn("weightZscore", df0.getColumn("weight").zscore());
+        df0.print();
+        Series outliers = df0.getColumn("weight").zscore().test(v -> Math.abs(v) > 1.5);
 
-### **Complex Example Scenarios**
-1. **Who is underpaid for their age?**
-   - Compare salary-to-age ratios and find people whose salary seems unusually low for their age group.
+        df0.drop((df, i) -> outliers.get(i) > 0).print();
 
-2. **Health assessment with missing data:**
-   - Calculate an adjusted BMI for rows where weight or height is missing by applying sensible defaults.
+        Series negativeNumbers = df.getColumn("favoriteNumber").test(v -> v < 0);
 
-3. **Custom group performance:**
-   - Compare average salary across any user-defined group (e.g., people with positive favorite numbers vs those with negatives).
+        df.drop((df, i) -> negativeNumbers.get(i) > 0).print();
+    }
 
-Let me know if you'd like to work on any specific operation or need implementation details!
-*/
+    /*
 
+    ### **Transformations**
+    1. **Update values conditionally**:
+       - For example:
+         - Set salary to `0` for rows where it is null.
+         - Modify favorite numbers to their absolute values.
+
+    2. **Clone and Modify Data**:
+       - Duplicate rows or datasets, and apply custom transformations for analysis.
+
+    ---
+    */
+    @Test
+    void transformTest()
+    {
+        df.replace("salary", 0, v -> Double.isNaN(v));
+        df.setColumn("favoriteNumber", df.getColumn("favoriteNumber").map(v -> Math.abs(v)));
+        df.print();
+        df.clone().print();
+        df.clone().setColumn("favoriteNumber", df.getColumn("favoriteNumber").map(v -> Math.abs(v))).print();
+    }
+
+    /*
+
+    ### **Complex Example Scenarios**
+    1. **Who is underpaid for their age?**
+       - Compare salary-to-age ratios and find people whose salary seems unusually low for their age group.
+
+    2. **Health assessment with missing data:**
+       - Calculate an adjusted BMI for rows where weight or height is missing by applying sensible defaults.
+
+    3. **Custom group performance:**
+       - Compare average salary across any user-defined group (e.g., people with positive favorite numbers vs those with negatives).
+
+    Let me know if you'd like to work on any specific operation or need implementation details!
+    */
+    @Test
+    void complexTest()
+    {
+        df = df.drop(Filter.hasNan("salary"));
+        df.setColumn("salaryToAge", df.getColumn("salary").zip(df.getColumn("age"), (s, a) -> s / a));
+        df.setColumn("salaryToAgeZscore", df.getColumn("salaryToAge").zscore());
+        df.print();
+
+        Series outliers = df.getColumn("salaryToAgeZscore").test(v -> v < -1.5);
+        df.filter((df, i) -> outliers.get(i) > 0).print();
+
+        df.setColumn("height", df.getColumn("height").map(v -> v / 100));
+        df.setColumn("bmi", df.getColumn("height").zip(df.getColumn("weight"), (h, w) -> w / (h * h)));
+        double avgBmi = df.getColumn("bmi").withoutNan().average();
+        df.print();
+        df.replace("bmi", avgBmi, v -> Double.isNaN(v));
+        df.print();
+
+        RowGrouper grouper = Grouper.groupByRow(row -> row.get("favoriteNumber") > 0);
+
+        Aggregator aggr = new Aggregator()
+                .addAggregation("size", df -> df.size())
+                .addAggregation("avgSalary", df -> df.getColumn("salary").withoutNan().average());
+
+        Dataframe groupAggr = df.groupAggregate(grouper, aggr);
+        groupAggr.print();
+    }
 
 
     @Test

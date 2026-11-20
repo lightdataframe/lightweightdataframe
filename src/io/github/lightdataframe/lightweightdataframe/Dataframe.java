@@ -592,6 +592,8 @@ public class Dataframe implements Serializable, Cloneable
 
     private static int printedValuesLength = 18;
 
+    private static int printedValuesPrecision = 3;
+
     /**
      * Sets the maximum number of rows printed when calling {@link #print()}
      * If the number of rows is greater than this value, middle values are skipped and only the head and tail are printed.
@@ -608,13 +610,25 @@ public class Dataframe implements Serializable, Cloneable
     /**
      * Sets the length (number of characters) of the printed values when calling {@link #print()}. Default is 18.
      *
-     * @param n length of printed values
+     * @param n length of printed values. Must be > 0.
      */
     public static void setPrintedValuesLength(int n)
     {
         if (n <= 0)
             throw new IllegalArgumentException("n must > 0");
         printedValuesLength = n;
+    }
+
+    /**
+     * Sets the precision (number of decimal places) of values when calling {@link #print()}. Default is 3.
+     *
+     * @param n precision of printed values. Must be >= 0.
+     */
+    public static void setPrintedValuesPrecision(int n)
+    {
+        if (n < 0)
+            throw new IllegalArgumentException("n must >= 0");
+        printedValuesPrecision = n;
     }
 
     /**
@@ -695,7 +709,7 @@ public class Dataframe implements Serializable, Cloneable
     private void buildLine(StringBuilder sb, String columnName, Map<String, Double> row)
     {
         String columnFormatString = "%" + printedValuesLength + "s";
-        String numberFormatString = "%" + printedValuesLength + ".3f";
+        String numberFormatString = "%" + printedValuesLength + "." + printedValuesPrecision + "f";
         if(columnName != null)
             sb.append(String.format(Locale.US, columnFormatString, columnName));
         for (Double cval : row.values())
