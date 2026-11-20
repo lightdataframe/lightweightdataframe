@@ -57,12 +57,16 @@ public class Serializer
             throw new IllegalArgumentException("csv is null");
 
         Dataframe df = new Dataframe();
+
+        if(csv.trim().isEmpty())
+            return df;
+
         List<String> lines = Arrays.stream(csv.split("\n"))
                 .map(String::trim)
-                .map(l -> {
-                    if(l.endsWith(","))
-                        l = l.substring(0, l.length() - 1);
-                    return l;
+                .map(line -> {
+                    if(line.endsWith(","))
+                        line = line.substring(0, line.length() - 1);
+                    return line;
                 })
                 .collect(Collectors.toList());
 
@@ -88,7 +92,7 @@ public class Serializer
         {
             List<Double> row = Arrays.stream(line.split(","))
                     .map(v -> {
-                        if(v.trim().equals("null"))
+                        if(v.trim().equals("null") || v.trim().equals("nan") || v.trim().isEmpty())
                             return Double.NaN;
                         return Double.parseDouble(v.trim());
                     })

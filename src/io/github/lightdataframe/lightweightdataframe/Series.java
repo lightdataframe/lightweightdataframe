@@ -198,6 +198,22 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     }
 
     /**
+     * Returns the series without duplicated values.
+     *
+     * @return a new series without duplicated values
+     */
+    public Series unique()
+    {
+        Series series = new Series();
+
+        for (Double v : this)
+            if (!series.contains(v))
+                series.add(v);
+
+        return series;
+    }
+
+    /**
      * Replaces values of the series matching the given predicate.
      * @param newValue value to replace the series values with
      * @param replacePredicate predicate to match values to be replaced
@@ -462,7 +478,6 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
         return zip(other, (a, b) -> a * b).sum();
     }
 
-
     /**
      * Computes and returns the sum of all values contained in the series. If the series is empty the method returns 0.
      * If the series has nan values the method returns {@code Double.NaN}.
@@ -676,6 +691,22 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     {
         return stream().anyMatch(v -> Double.isNaN(v));
     }
+
+    /**
+     * Counts the number of occurrences of a given value in the series.
+     *
+     * @param value the value to count occurrences of
+     * @return the number of occurrences of the value in the series
+     */
+    public double count(double value)
+    {
+        int count = 0;
+        for (double v : this)
+            if (v == value)
+                count++;
+        return count;
+    }
+
 
     /**
      * Computes and returns a map of statistical metrics for the current series.
