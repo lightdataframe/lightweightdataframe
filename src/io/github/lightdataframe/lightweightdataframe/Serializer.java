@@ -284,11 +284,19 @@ public class Serializer
     private static Dataframe fromJsonColumnsRows(String json)
     {
         JSONObject jobj = new JSONObject(json);
-        List<String> columns = new ArrayList<>();
-        for(Object col : jobj.getJSONArray("columns"))
-            columns.add(col.toString());
 
-        Dataframe df = fromJsonRows(jobj.getJSONArray("rows").toString());
+        JSONArray columnsArray = jobj.getJSONArray("columns");
+        JSONArray rowsArray = jobj.getJSONArray("rows");
+
+        List<String> columns = new ArrayList<>();
+        for(int i = 0; i < columnsArray.length(); i++)
+            if(!columnsArray.isNull(i))
+                columns.add(columnsArray.getString(i));
+
+        Dataframe df = fromJsonRows(rowsArray.toString());
+
+        if(!new HashSet<>(columns).equals(new HashSet<>(df.getColumns())))
+            throw new IllegalArgumentException("columns in json do not match dataframe columns");
 
         df.reorderColumns(columns.toArray(new String[0]));
 

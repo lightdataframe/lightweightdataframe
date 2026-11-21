@@ -137,9 +137,12 @@ class SerializerTest
         json = "{columns: [\"col1\", \"], rows: [{\"col2\" : 0.6, \"col1\" : 0.1}, {\"col1\" : NaN, \"col2\" : null}]}"; // Wrong json
         String finalJson1 = json;
         assertThrows(RuntimeException.class, () -> Serializer.fromJson(JsonFormat.COLUMNS_ROWS, finalJson1));
+        json = "{columns: [\"col1\", null], rows: [{\"col2\" : 0.6, \"col1\" : 0.1}, {\"col1\" : NaN, \"col2\" : null}]}"; // Null column name
+        String finalJson2 = json;
+        assertThrows(RuntimeException.class, () -> Serializer.fromJson(JsonFormat.COLUMNS_ROWS, finalJson2));
 
         json = "{\"col1\" : [0.1, , -4], \"col2\" : [0.2, -0.4]}"; // Column length mismatch
-        String finalJson2 = json;
-        assertThrows(RuntimeException.class, () -> Serializer.fromJson(JsonFormat.COLUMNS, finalJson2));
+        String finalJson3 = json;
+        assertThrows(RuntimeException.class, () -> Serializer.fromJson(JsonFormat.COLUMNS, finalJson3));
     }
 }
