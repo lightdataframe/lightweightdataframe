@@ -702,7 +702,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     {
         int count = 0;
         for (double v : this)
-            if (v == value)
+            if (v == value || (Double.isNaN(v) && Double.isNaN(value)))
                 count++;
         return count;
     }
