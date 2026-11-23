@@ -10,8 +10,7 @@
     <packaging>jar</packaging>
 
     <name>Lightweight Dataframe</name>
-    <description>Library providing a lightweight functional dataframe implementation. Provides dataframe and series manipulation, serialization, and plotting.
-        Dataframe and series provide a collector to gather data from the stream API.
+    <description>Library providing a lightweight functional dataframe implementation. Provides dataframe and series manipulation, serialization, and plotting. Dataframe and series provide a collector to gather data from the stream API.
     </description>
     <url>https://github.com/lightdataframe/lightweightdataframe</url>
 
