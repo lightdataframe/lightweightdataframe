@@ -4,8 +4,7 @@ import io.github.lightdataframe.lightweightdataframe.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class Example5Test
 {
@@ -150,9 +149,26 @@ public class Example5Test
     {
         df = df.drop(Filter.hasNan());
         List<String> columns = df.getColumns();
+        Dataframe corrDf = new Dataframe();
+        for(String col0 : columns)
+        {
+            Map<String, Double> correlation = new LinkedHashMap<>();
+            for (String col1 : columns)
+            {
+                double corr = correlation(df.getColumn(col0), df.getColumn(col1));
+                correlation.put(col1, corr);
+            }
+            corrDf.append(correlation);
+        }
+        corrDf.print();
 
+        Dataframe strongCorr = new Dataframe();
+        for(String col : corrDf.getColumns())
+            strongCorr.setColumn(col, corrDf.getColumn(col).test(v -> Math.abs(v) > 0.7));
+        strongCorr.print();
 
     }
+
     /*
 ---
 
@@ -168,6 +184,16 @@ public class Example5Test
    - Visualize the spread of data and outliers for `Height`, `Width`, and `GrowthRate`.
 4. **Heatmap for correlation**:
    - Create a heatmap for the feature correlation matrix to visualize any strong relationships or dependencies.
+
+*/
+
+    @Test
+    void testPlot() throws InterruptedException
+    {
+        Plotter.scatter(df.getColumn("Height"), df.getColumn("Width"));
+    }
+
+    /*
 
 ---
 
@@ -185,6 +211,30 @@ public class Example5Test
 3. **Binning**:
    - Create bins for numeric features such as `WaterRequirement` (Low, Medium, High) or `GrowthRate` (Slow, Moderate, Fast).
 
+*/
+    @Test
+    void testTransform()
+    {
+        df.setColumn("Low Light", df.getColumn("Sunlight").test(s -> s <= 0));
+        df.replace("Sunlight", 0, s -> s < 0);
+
+        df.setColumn("Volume", df.getColumn("Height").zip(df.getColumn("Width"), (h, w) -> h * w));
+        df.replaceColumn("Sunlight", s -> s.normalized());
+        df.replaceColumn("WaterRequirement", s -> s.normalized());
+
+        df.setColumn("Age Group", df.getColumn("Age").map(a -> a < 6 ? 0 : a < 11 ? 1 : 2));
+
+        df.getColumn("WaterRequirement")
+                .normalized()
+                .map(v -> Math.floor(v * 100) )
+                .map(v -> v - v % 10)
+                .map(v -> v / 10)
+                .print();
+    }
+
+
+    /*
+
 ---
 
 ### **5. Filtering and Subsetting**
@@ -197,6 +247,24 @@ public class Example5Test
    - Create sub-datasets based on specific conditions (e.g., Mature plants, Fast-growing plants).
 3. **Out-of-range detection**:
    - Find plants that require excessive `WaterRequirement` (e.g., >50 liters) or have very low `GrowthRate`.
+*/
+
+    @Test
+    void testFilter()
+    {
+        df.filter(Filter.rowTest(row -> row.get("Height") > 120 && row.get("GrowthRate") > 1.5)).print();
+        df.filter(Filter.rowTest(row -> row.get("Sunlight") < 0)).print();
+        Dataframe df0 = df.filter(Filter.rowTest(row -> row.get("Age") <= 5));
+        df0.filter(Filter.rowTest(row -> row.get("GrowthRate") == df0.getColumn("GrowthRate").withoutNan().max()))
+                .print();
+
+        df.filter(Filter.rowTest(row -> Double.isNaN(row.get("Height")) || Double.isNaN(row.get("GrowthRate")))).print();
+        df.filter(Filter.rowTest(row -> row.get("GrowthRate") >= 2)).print();
+
+        df.filter(Filter.valueTest("WaterRequirement", v -> v > 50)).print();
+    }
+
+    /*
 
 ---
 
@@ -210,6 +278,30 @@ public class Example5Test
 3. **Analyze by water requirements**:
    - Determine the total number of plants in each `WaterRequirement` bin (Low, Medium, High).
 
+*/
+    @Test
+    void testGroup()
+    {
+        df.print();
+        df = df.drop(Filter.hasNan());
+        Dataframe ga = df.groupAggregate(
+                Grouper.groupByRow(row -> row.get("Age") <= 3 ? 0 : row.get("Age") <= 8 ? 1 : 2),
+                new Aggregator()
+                        .addAggregation("age_group", df -> {
+                            double a = df.getColumn("Age").first();
+                            return a <= 3 ? 0 : a <= 8 ? 1 : 2;
+                        })
+                        .addAggregation("count", df -> df.size())
+                        .addAggregation("sum_height", df -> df.getColumn("Height").sum())
+                        .addAggregation("sum_width", df -> df.getColumn("Width").sum())
+                        .addAggregation("sum_growth_rate", df -> df.getColumn("GrowthRate").sum())
+                        .addAggregation("avg_height", df -> df.getColumn("Height").average())
+                        .addAggregation("avg_width", df -> df.getColumn("Width").average())
+                        .addAggregation("avg_growth_rate", df -> df.getColumn("GrowthRate").average())
+        );
+        ga.sort(true, Sorter.sortByColumn(true, "age_group", v -> v)).print();
+    }
+    /*
 ---
 
 ### **7. Outlier Detection**
@@ -218,6 +310,22 @@ public class Example5Test
    - Outliers in `WaterRequirement` that don’t match the expected range.
 2. **Handle outliers**:
    - Decide whether to remove, cap, or replace these values (based on domain knowledge).
+
+*/
+    @Test
+    void testOutlier()
+    {
+        df = df.drop(Filter.hasNan());
+        df.setColumn("Height_Age_Ratio", df.getColumn("Height").zip(df.getColumn("Age"), (h, a) -> h / a));
+
+        df.setColumn("Ratio_ZScore", df.getColumn("Height_Age_Ratio").zscore());
+        df.setColumn("Ratio_Outlier", df.getColumn("Ratio_ZScore").zscore().test(z -> Math.abs(z) > 2));
+
+        df = df.drop(Filter.valueTest("Ratio_Outlier", v -> v == 1));
+
+        df.print();
+    }
+    /*
 
 ---
 
@@ -230,6 +338,64 @@ public class Example5Test
 3. **Analyze missing data trends**:
    - Find patterns related to missing values (e.g., do plants of a certain `Age` have more missing data?).
    - Impute or make decisions based on observed trends.
+
+
+*/
+
+    private double ageCategory(double age)
+    {
+        if(age <= 5)
+            return 0;
+        else if(age <= 10)
+            return 1;
+        else
+            return 2;
+    }
+
+    private double survival(Row row)
+    {
+        double sunlight = row.get("Sunlight");
+        double waterReq = row.get("WaterRequirement");
+        double growthRate = row.get("GrowthRate");
+        return 0;
+    }
+
+    @Test
+    void testAdvanced()
+    {
+        df.setColumn("Age_Category", df.getColumn("Age").map(this::ageCategory));
+        RowGrouper grouper = Grouper.groupByRow(row -> row.get("Age_Category"));
+
+
+        Dataframe maxGR = new Dataframe();
+        df.group(grouper)
+                .values()
+                .stream()
+                .map(df0 -> df0.filter(Filter.rowTest(row -> row.get("GrowthRate") == df0.getColumn("GrowthRate").withoutNan().max())))
+                .map(Dataframe::getRows)
+                .flatMap(Collection::stream)
+                .forEach(maxGR::append);
+        maxGR.print();
+
+        df.setColumn("survival", df.apply(Mapper.mapByRow(this::survival)));
+
+
+
+        Dataframe.setMaxPrintedRows(20);
+        df.print();
+        Dataframe df0 = df.groupAggregate(grouper,
+                new Aggregator()
+                        .addAggregation("category", df -> df.getColumn("Age_Category").first())
+                        .addAggregation("missing", df -> df.find(Filter.hasNan()).size())
+        );
+        df0.print();
+
+        for(String col : df.getColumns())
+            df.replace(col, df.getColumn(col).withoutNan().average(), v -> Double.isNaN(v));
+
+    }
+
+    /*
 
 ---
 

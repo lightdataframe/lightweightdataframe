@@ -512,6 +512,53 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     }
 
     /**
+     * Returns the index of the first occurrence of the maximum value in the series, ignoring nan values.
+     * If the series is empty or contains only nan values returns {@code -1}.
+     *
+     * @return the index of the first occurrence of the maximum value in the series, or {@code -1} if the series is empty
+     */
+    public int argmax()
+    {
+        double max = Double.MIN_VALUE;
+        int index = -1;
+        for (int i = 0; i < size(); i++)
+        {
+            double v = get(i);
+            if (v > max)
+            {
+                max = v;
+                index = i;
+            }
+        }
+        return index;
+    }
+
+    /**
+     * Returns the index of the first occurrence of the minimum value in the series, ignoring nan values.
+     * If the series is empty or contains only nan values returns {@code -1}.
+     *
+     * @return the index of the first occurrence of the minimum value in the series, or {@code -1} if the series is empty
+     */
+    public int argmin()
+    {
+        double min = Double.MAX_VALUE;
+        int index = -1;
+        for (int i = 0; i < size(); i++)
+        {
+            double v = get(i);
+            if (v < min)
+            {
+                min = v;
+                index = i;
+            }
+        }
+        return index;
+    }
+
+
+
+
+    /**
      * Calculates and returns the average of the values in the series.
      * The average is computed by summing all elements and dividing by the number of elements.
      * If the series is empty or has nan values, the method returns {@code Double.NaN}.
@@ -701,8 +748,9 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     public double count(double value)
     {
         int count = 0;
+        boolean isNan = Double.isNaN(value);
         for (double v : this)
-            if (v == value || (Double.isNaN(v) && Double.isNaN(value)))
+            if (v == value || (isNan && Double.isNaN(v)))
                 count++;
         return count;
     }

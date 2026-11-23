@@ -147,6 +147,19 @@ public class Sorter
     }
 
     /**
+     * Strategy to map the index of a row to a score using the provided function
+     *
+     * @param scorer scorer to map the index of
+     * @return a row scorer that maps row indices to scores using the provided function
+     */
+    public static RowScorer sortByIndex(ToDoubleFunction<Integer> scorer)
+    {
+        if (scorer == null)
+            throw new IllegalArgumentException("scorer is null");
+        return (df, n) -> scorer.applyAsDouble(n);
+    }
+
+    /**
      * Strategy to map the score of a row scorer to a new score using the provided function
      *
      * @param scorer scorer to map the score of

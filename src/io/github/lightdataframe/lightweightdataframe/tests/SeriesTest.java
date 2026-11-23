@@ -32,8 +32,54 @@ class SeriesTest
     @Test
     void unique()
     {
-        Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d, 4d, 7d, 7d, 8d, 8d, 10d));
+        Series series = new Series(Arrays.asList(1d, Double.NaN, 3d, 4d, 4d, 7d, 7d, 8d, Double.NaN, 10d));
         series.unique().print();
+    }
+
+    @Test
+    void argmax()
+    {
+        int amin = new Series().argmax();
+        assertEquals(-1, amin);
+
+        Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d, 5d, 0d, 7d, 8d, Double.NaN, Double.NaN));
+        assertEquals(7, series.argmax());
+
+        // All nan values
+        series = Series.fill(10, Double.NaN);
+        assertEquals(-1, series.argmax());
+        for(int i = 0; i < 20; i++)
+        {
+            Series s = TestUtil.randomSeries(10000);
+            assertEquals(s.withoutNan().max(), s.get(s.argmax()));
+        }
+
+        series = Series.range(0, 1, 0.05);
+        assertEquals(19, series.argmax());
+    }
+
+    @Test
+    void argmin()
+    {
+        int amin = new Series().argmin();
+        assertEquals(-1, amin);
+
+
+        Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d, 5d, 0d, 7d, 8d, Double.NaN, Double.NaN));
+        assertEquals(5, series.argmin());
+
+        // All nan values
+        series = Series.fill(10, Double.NaN);
+        assertEquals(-1, series.argmin());
+
+        for(int i = 0; i < 20; i++)
+        {
+            Series s = TestUtil.randomSeries(10000);
+            assertEquals(s.withoutNan().min(), s.get(s.argmin()));
+        }
+
+        series = Series.range(0, 1, 0.05);
+        assertEquals(0, series.argmin());
     }
 
     @Test
@@ -69,6 +115,17 @@ class SeriesTest
         Series mapped = series.map((s, i) -> Math.pow(s.get(i), 2));
         mapped.print();
     }
+
+    @Test
+    void count()
+    {
+        Series series = new Series(Arrays.asList(1d, 2d, 3d, null, 5d, 6d, 7d, 8d, null, 10d));
+
+        assertEquals(1, series.count(1d));
+        assertEquals(1, series.count(8d));
+        assertEquals(2, series.count(Double.NaN));
+    }
+
 
     @Test
     void print()

@@ -362,6 +362,23 @@ public class DataframeTest
     }
 
     @Test
+    void apply()
+    {
+        Dataframe df = TestUtil.randomDataframe(1000);
+
+        Series result = df.apply(Mapper.mapByRow(row -> row.get("col0") + row.get("col1")));
+        assertEquals(df.size(), result.size());
+
+        for(int i = 0; i < df.size(); i++)
+            assertEquals(df.getRow(i).get("col0") + df.getRow(i).get("col1"), result.get(i));
+
+        assertThrows(IllegalArgumentException.class, () -> df.apply(null));
+
+        df.setColumn("index", df.apply(Mapper.mapByIndex(i -> i)));
+        df.reorderColumns("index").print();
+    }
+
+    @Test
     void sort()
     {
         RowScorer s0 = Sorter.sortByColumns(true, "col0");

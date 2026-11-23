@@ -92,9 +92,10 @@ public class Serializer
         {
             List<Double> row = Arrays.stream(line.split(","))
                     .map(v -> {
-                        if(v.trim().equals("null") || v.trim().equals("nan") || v.trim().isEmpty())
+                        String trimmed = v.trim();
+                        if(trimmed.equals("null") || trimmed.equals("nan") || trimmed.isEmpty())
                             return Double.NaN;
-                        return Double.parseDouble(v.trim());
+                        return Double.parseDouble(trimmed);
                     })
                     .collect(Collectors.toList());
 

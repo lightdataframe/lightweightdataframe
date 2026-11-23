@@ -80,6 +80,21 @@ public class Filter
 
 
     /**
+     * Strategy that retains rows based on their indices
+     *
+     * @param indexTest predicate to test indices with
+     * @return a row filter that retains rows based on their indices
+     */
+    public static RowFilter indexTest(Predicate<Integer> indexTest)
+    {
+        if (indexTest == null)
+            throw new IllegalArgumentException("indexTest is null");
+
+        return (df, n) -> indexTest.test(n);
+    }
+
+
+    /**
      * Strategy to retain only rows with at least one nan value in the specified columns.
      * If no columns are specified, all columns are checked.
      *

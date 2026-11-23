@@ -53,9 +53,15 @@ public class Dataframe implements Serializable, Cloneable
         if (data.isEmpty())
             return new Series();
 
-        return data.stream()
+        Series result = new Series();
+
+        List<Double> values = data.stream()
                 .map(m -> m.get(column))
-                .collect(Series.collector(v -> v));
+                .collect(Collectors.toList());
+
+        result.addAll(values);
+
+        return result;
     }
 
     /**
@@ -753,6 +759,31 @@ public class Dataframe implements Serializable, Cloneable
                 String.join(", ", getColumns())
         );
     }
+
+    /**
+     * Applies to the dataframe the given {@link RowMapper}.
+     * See {@link Mapper} for common mapping strategies.
+     *
+     * @param mapper the mapper to apply to the dataframe
+     * @return a series containing the mapped values
+     */
+    public Series apply(RowMapper mapper)
+    {
+        if (mapper == null)
+            throw new IllegalArgumentException("mapper is null");
+
+        Series result = new Series();
+
+        List<Double> mappedValues = IntStream.range(0, size())
+                .boxed()
+                .map(n -> mapper.getRowValue(this, n))
+                .collect(Collectors.toList());
+
+        result.addAll(mappedValues);
+
+        return result;
+    }
+
 
     /**
      * Sorts the dataframe rows by the given {@link RowScorer}.<br>
