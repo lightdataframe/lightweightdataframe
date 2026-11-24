@@ -13,7 +13,7 @@ public class TestUtil
         for(int i = 0; i < n; i++)
         {
             Double v = Math.random();
-            if(Math.random() < 0.05)
+            if(Math.random() < 0.075)
                 v = null;
             series.add(v);
         }

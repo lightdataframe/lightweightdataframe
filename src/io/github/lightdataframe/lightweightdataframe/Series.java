@@ -39,26 +39,27 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
      * Generates a sample series by randomly selecting elements.
      * The sampling can be done with or without replacement.
      *
-     * @param n The number of elements to sample from this Series. Must be a non-negative integer
+     * @param n           The number of elements to sample from this Series. Must be a non-negative integer
      * @param replacement A boolean indicating whether sampling should be with replacement
      *                    If true, elements can be selected multiple times; otherwise,
      *                    elements can be selected only one time
      *                    If false and n > size() then the sample will contain size() elements
      * @return A new series containing the sampled elements
+     * @throws IllegalArgumentException if n is negative
      */
     public Series sample(int n, boolean replacement)
     {
-        if(n < 0)
+        if (n < 0)
             throw new IllegalArgumentException("n must be positive");
 
         Series from = new Series(this);
         Series sample = new Series();
 
-        while(n > 0 && from.size() > 0)
+        while (n > 0 && from.size() > 0)
         {
             int idx = (int) Math.floor(Math.random() * from.size());
             sample.add(from.get(idx));
-            if(!replacement)
+            if (!replacement)
                 from.remove(idx);
             n--;
         }
@@ -93,7 +94,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
         {
             Series series = new Series(
                     stream()
-                    .filter(v -> groupFunction.applyAsDouble(v) == group)
+                    .filter(v -> Objects.equals(group, groupFunction.applyAsDouble(v)))
                     .collect(Collectors.toList())
             );
             result.put(group, series);
@@ -126,7 +127,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
      * Transforms the elements of the current series by applying a specified mapping function
      * to each element and returns a new series containing the mapped values.
      *
-     * @param valueMap A function that takes a Double as input and returns a double.
+     * @param valueMap A function that takes a double as input and returns a double.
      *                 This function is applied to each element of the series.
      * @return A new series containing the values resulting from applying the mapping function to each element.
      */
@@ -313,8 +314,9 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     /**
      * Returns a new Series with its values normalized to a range between 0 and 1.
      * Normalization is achieved by scaling each value using the formula:
-     * (value - min) / (max - min), where min and max are the minimum and maximum
+     * {@code normalized = (value - min) / (max - min)}, where min and max are the minimum and maximum
      * values of the current series.
+     * If min equals to max (all values of the series are the same) then a value of 0 is returned for every value.
      *
      * @return a new series where all values are normalized to the range [0, 1].
      */
@@ -328,7 +330,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
     }
 
     /**
-     * Returns a new series sorted based on the specified score function.
+     * Returns a new series sorted based on the specified score function. Nan values are put last.
      *
      * @param scorer a function to score the series elements
      * @return a new series with sorted elements
@@ -519,6 +521,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
      */
     public int argmax()
     {
+
         double max = Double.MIN_VALUE;
         int index = -1;
         for (int i = 0; i < size(); i++)
@@ -665,8 +668,8 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
 
     /**
      * Calculates the median of the elements in the series.
-     * The median is the middle value in a sorted list of odd size.
-     * If the series has an even number of elements, the median is calculated as the average of the two middle numbers.
+     * The median is the middle value in a sorted list of odd size, while for even sizes the median is calculated as the average of the two middle numbers.
+     *
      *
      * @return the median value of the series as a double. If the series is empty {@code Double.NaN} is returned.
      */
@@ -703,7 +706,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
      * Calculates the value at which a given percentile lies. The percentile of a value is the percentage of elements
      * that are less or equal to it.
      * For example, {@code percentileValue(0.95)} returns the value of the series having 0.95 elements lesser than it.
-     *
+     * The percentile estimate is obtained through the CDF method.
      * @param percentile percentile to calculate the value for
      * @return the value for the given percentile. If the series is empty {@code Double.NaN} is returned.
      */
@@ -920,7 +923,7 @@ public class Series extends ArrayList<Double> implements Serializable, Cloneable
         if(step <= 0)
             throw new IllegalArgumentException("step must be greater than 0");
         if(Double.isNaN(from) || Double.isNaN(to) || Double.isNaN(step))
-            throw new IllegalArgumentException("from, to, and step must be finite");
+            throw new IllegalArgumentException("from, to, and step must be valid numbers");
 
         Series series = new Series();
 

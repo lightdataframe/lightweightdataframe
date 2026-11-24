@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -18,7 +19,7 @@ class SeriesTest
     @Test
     void sample()
     {
-        Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d, 10d));
+        Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d, 5d, 6d, 7d, Double.NaN, 9d, 10d));
 
         Series sample = series.sample(5, false);
         assertEquals(5, sample.size());
@@ -29,11 +30,14 @@ class SeriesTest
         sample = series.sample(20, false);
         assertEquals(10, sample.size());
     }
+
+
     @Test
     void unique()
     {
-        Series series = new Series(Arrays.asList(1d, Double.NaN, 3d, 4d, 4d, 7d, 7d, 8d, Double.NaN, 10d));
+        Series series = new Series(Arrays.asList(1d, Double.NaN, 4d, 4d, 4d, 7d, 7d, 8d, Double.NaN, 10d));
         series.unique().print();
+        assertEquals(6, series.unique().size());
     }
 
     @Test
@@ -96,6 +100,16 @@ class SeriesTest
         assertEquals(1, groups.size());
         assertEquals(10, groups.get(1d).size());
 
+        series = new Series(Arrays.asList(-1d, -2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d, 10d));
+        groups = series.group(v -> v > 0 ? 1d : 0d);
+        assertEquals(2, groups.size());
+        assertEquals(2, groups.get(0d).size());
+        assertEquals(8, groups.get(1d).size());
+
+        series = new Series(Arrays.asList(1d, 2d, Double.NaN, Double.NaN, 5d, 6d, 7d, 8d, 9d, 10d));
+
+        groups = series.group(v -> v);
+        assertEquals(9, groups.size());
     }
 
     @Test
@@ -142,6 +156,8 @@ class SeriesTest
         Series.setMaxPrintedValues(10);
         Series.setPrintedValuesPrecision(5);
         series.print();
+        assertThrows(IllegalArgumentException.class, () -> Series.setPrintedValuesLength(-1));
+        assertThrows(IllegalArgumentException.class, () -> Series.setPrintedValuesLength(0));
         assertThrows(IllegalArgumentException.class, () -> Series.setMaxPrintedValues(-1));
         assertThrows(IllegalArgumentException.class, () -> Series.setPrintedValuesPrecision(-1));
     }
@@ -149,27 +165,29 @@ class SeriesTest
     @Test
     void zscore()
     {
-
         Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d, 10d));
 
         double mean = series.average();
         double std = series.std();
         Series zscore = series.zscore();
         assertEquals(series, zscore.map(v -> new BigDecimal(v * std + mean).setScale(8, RoundingMode.DOWN).doubleValue()));
-
     }
 
     @Test
     void normalized()
     {
-        Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d, 10d));
+        Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d, 5d, Double.NaN, 7d, 8d, 9d, 10d));
 
         Series normalized = series.normalized();
-        assertEquals(0, normalized.min());
-        assertEquals(1, normalized.max());
+        assertTrue(normalized.all(v -> Double.isNaN(v)));
+        assertEquals(Double.NaN, normalized.min());
+        assertEquals(Double.NaN, normalized.max());
+        assertEquals(0d, series.withoutNan().normalized().min());
+        assertEquals(1d, series.withoutNan().normalized().max());
 
-        normalized = new Series().cumsum();
-        assertEquals(0, normalized.size());
+        series = new Series(Arrays.asList(Double.NaN, Double.NaN, Double.NaN));
+        normalized = series.normalized();
+        assertTrue(normalized.all(v -> Double.isNaN(v)));
     }
 
     @Test
@@ -186,7 +204,7 @@ class SeriesTest
         assertEquals(0, cumsum.size());
 
         series = Series.from(0, 1, 2, 4);
-        assertTrue(Arrays.asList(0d, 1d, 3d, 7d).equals(series.cumsum()));
+        assertEquals(Arrays.asList(0d, 1d, 3d, 7d), series.cumsum());
     }
 
     @Test
@@ -200,53 +218,68 @@ class SeriesTest
 
         Series series0 = new Series(Arrays.asList(1d, 2d, 3d, Double.NaN));
         assertEquals(Double.NaN, series0.sum());
-        assertEquals(Double.NaN, series0.var());
-        assertEquals(Double.NaN, series0.std());
     }
 
     @Test
     void min()
     {
-        Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d));
-        assertEquals(1, series.min());
+        Series series = new Series(Arrays.asList(1d, -2d, 3d, 4d));
+        assertEquals(-2, series.min());
 
         assertEquals(Double.NaN, new Series().min());
+
+        series = new Series(Arrays.asList(1d, -2d, 3d, Double.NaN));
+        assertEquals(Double.NaN, series.min());
     }
 
     @Test
     void max()
     {
-        Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d));
-        assertEquals(4, series.max());
+        Series series = new Series(Arrays.asList(1d, 2d, 3d, 4.5));
+        assertEquals(4.5, series.max());
 
         assertEquals(Double.NaN, new Series().max());
+
+        series = new Series(Arrays.asList(1d, 2d, 3d, Double.NaN));
+        assertEquals(Double.NaN, series.max());
     }
 
     @Test
-    void mean()
+    void average()
     {
         Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d));
         double mean = (1 + 2 + 3 + 4) / 4d;
         assertEquals(mean, series.average());
 
         assertEquals(Double.NaN, new Series().average());
+
+        series = new Series(Arrays.asList(1d, 2d, Double.NaN, 4d));
+        assertEquals(Double.NaN, series.average());
     }
 
     @Test
-    void var()
+    void varAndStd()
     {
         Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d));
         double mean = (1 + 2 + 3 + 4) / 4d;
-        double var = ((4 - mean) * (4 - mean) + (3 - mean) * (3 - mean) + (2 - mean) * (2 - mean) + (1 - mean) * (1 - mean)) / 4;
+        double var = ((4 - mean) * (4 - mean) + (3 - mean) * (3 - mean) + (2 - mean) * (2 - mean) + (1 - mean) * (1 - mean)) / 4d;
         double std = Math.sqrt(var);
+
+        assertTrue(series.var() > 0);
         assertEquals(var, series.var());
         assertEquals(std, series.std());
 
-
-        assertTrue(series.var() > 0);
-        assertEquals(BigDecimal.valueOf(series.var()).setScale(8, RoundingMode.DOWN), BigDecimal.valueOf(Math.pow(series.std(), 2)).setScale(8, RoundingMode.DOWN));
+        assertEquals(
+                BigDecimal.valueOf(series.var()).setScale(8, RoundingMode.DOWN),
+                BigDecimal.valueOf(Math.pow(series.std(), 2)).setScale(8, RoundingMode.DOWN)
+        );
 
         assertEquals(Double.NaN, new Series().var());
+        assertEquals(Double.NaN, new Series().std());
+
+        series = new Series(Arrays.asList(1d, 2d, Double.NaN, 4d));
+        assertEquals(Double.NaN, series.var());
+        assertEquals(Double.NaN, series.std());
     }
 
     @Test
@@ -312,6 +345,8 @@ class SeriesTest
     {
         Series series = new Series(Arrays.asList(1d, 2d, 3d, 4d));
         assertEquals(1, series.first());
+
+        assertEquals(Double.NaN, new Series().first());
     }
 
     @Test
@@ -321,6 +356,8 @@ class SeriesTest
         assertEquals(4, series.last());
 
         assertEquals(Double.NaN, new Series().last());
+        series = new Series(Arrays.asList(1d, 2d, 3d, 4d, Double.NaN));
+        assertEquals(Double.NaN, series.last());
     }
 
     @Test
@@ -329,6 +366,8 @@ class SeriesTest
         Series series = new Series(Arrays.asList(0d, 1d, 2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d));
         assertEquals(Arrays.asList(1d, 2d), series.between(1, 3));
         assertEquals(Arrays.asList(0d, 1d, 2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d), series.between(0, 10));
+        assertThrows(IllegalArgumentException.class, () -> series.between(-1, 10));
+        assertThrows(IllegalArgumentException.class, () -> series.between(0, 11));
     }
 
     @Test
@@ -336,8 +375,12 @@ class SeriesTest
     {
         Series series = new Series(Arrays.asList(3d, 2d, 1d, 4d));
         assertEquals(2.5, series.median());
+        series = new Series(Arrays.asList(3d, 2d, 1d, 4d, 10d, 15d));
+        assertEquals(3.5, series.median());
         series = new Series(Arrays.asList(1d, 7d, 3d, 4d, 5d, 6d, 2d));
         assertEquals(4, series.median());
+        series = new Series(Arrays.asList(1d, 7d, Double.NaN, 4d, Double.NaN, 6d, 2d));
+        series.median();
     }
 
     @Test
@@ -346,6 +389,11 @@ class SeriesTest
         Series series = new Series(Arrays.asList(3d, 2d, 1d, 4d));
         assertTrue(series.any(v -> v > 3));
         assertFalse(series.any(v -> v < 0));
+
+        series = new Series(Arrays.asList(3d, Double.NaN, 1d, 4d));
+
+        assertTrue(series.any(v -> Double.isNaN(v)));
+        assertTrue(series.any(v -> v > 3));
     }
 
     @Test
@@ -354,6 +402,9 @@ class SeriesTest
         Series series = new Series(Arrays.asList(3d, 2d, 1d, 4d));
         assertTrue(series.all(v -> v > 0));
         assertFalse(series.all(v -> v < 0));
+
+        series = new Series(Arrays.asList(Double.NaN, Double.NaN));
+        assertTrue(series.all(v -> Double.isNaN(v)));
     }
 
     @Test
@@ -363,14 +414,23 @@ class SeriesTest
         Series series1 = new Series(Arrays.asList(1d, 2d, 3d, 4d));
         assertEquals(series1, series0.sort(v -> v));
         assertEquals(series1, series0.sort(v -> v * 2));
+
+        series1.sort(Comparator.<Double>naturalOrder().reversed());
+
+        assertEquals(series1, series0.sort(v -> -v));
     }
 
     @Test
     void test()
     {
-
         Series series = new Series(Arrays.asList(3d, 2d, 1d, 4d));
         Series test = series.test(v -> v > 2);
+        assertEquals(1, test.get(0));
+        assertEquals(0, test.get(1));
+        assertEquals(0, test.get(2));
+        assertEquals(1, test.get(3));
+        series = new Series(Arrays.asList(3d, 2d, Double.NaN, 4d));
+        test = series.test(v -> v > 2);
         assertEquals(1, test.get(0));
         assertEquals(0, test.get(1));
         assertEquals(0, test.get(2));
@@ -383,6 +443,8 @@ class SeriesTest
         Series series = new Series(Arrays.asList(3d, 2d, 1d, 4d));
         assertFalse(series.hasNan());
         series = new Series(Arrays.asList(3d, 2d, 1d, 4d, Double.NaN));
+        assertTrue(series.hasNan());
+        series = new Series(Arrays.asList(Double.NaN, Double.NaN));
         assertTrue(series.hasNan());
     }
 
@@ -450,7 +512,10 @@ class SeriesTest
         Series series0 = new Series(Arrays.asList(3d, 2d, 1d, 4d));
         Series series1 = new Series(Arrays.asList(3d, 2d, 1d, 4d));
         assertEquals(series0, series1);
-        assertNotSame(series0, series1.sort(v -> v));
+        assertNotEquals(series0, series1.sort(v -> v));
+        series0 = new Series(Arrays.asList(3d, Double.NaN, 1d, 4d));
+        series1 = new Series(Arrays.asList(3d, Double.NaN, 1d, 4d));
+        assertEquals(series0, series1);
     }
 
     @Test
@@ -458,8 +523,9 @@ class SeriesTest
     {
         List<Object> objs = Arrays.asList(1d, 2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d, 10d);
 
-        Series series = objs.stream().collect(Series.collector(o -> 1d));
+        Series series = objs.stream().collect(Series.collector(o -> (Double)o));
         assertEquals(objs.size(), series.size());
+        assertEquals(Arrays.asList(1d, 2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d, 10d), series);
     }
 
     @Test
@@ -471,6 +537,7 @@ class SeriesTest
 
         range = Series.range(0, 100, 1);
         assertEquals(100, range.size());
+        assertThrows(IllegalArgumentException.class, () -> Series.range(0, Double.NaN, 0));
     }
 
     @Test
@@ -480,6 +547,7 @@ class SeriesTest
         s = Series.range(0, 1, 0.033333333333333333333333);
         s.print();
         assertEquals(5, Series.from(0, 1, 2, 3, 4).size());
+        assertEquals(5, Series.from(0, 1, 2, Double.NaN, 4).size());
     }
 
     @Test
@@ -490,5 +558,9 @@ class SeriesTest
         assertFalse(series.hasNan());
         series = series.replace(5d, v -> v == 2d);
         assertEquals(5, series.get(1));
+
+        series = new Series(Arrays.asList(3d, 2d, 1d, Double.NaN, Double.NaN));
+        series = series.replace(Double.NaN, v -> !Double.isNaN(v));
+        assertTrue(series.all(v -> Double.isNaN(v)));
     }
 }

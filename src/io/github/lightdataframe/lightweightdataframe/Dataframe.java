@@ -47,11 +47,11 @@ public class Dataframe implements Serializable, Cloneable
     {
         if (column == null)
             throw new IllegalArgumentException("column is null");
-        if (!data.isEmpty() && !data.get(0).containsKey(column))
+        if (data.isEmpty())
+            throw new IllegalArgumentException("column " + column + " not found");
+        if (!data.get(0).containsKey(column))
             throw new IllegalArgumentException("column " + column + " not found");
 
-        if (data.isEmpty())
-            return new Series();
 
         Series result = new Series();
 
@@ -186,7 +186,7 @@ public class Dataframe implements Serializable, Cloneable
      *
      * @param column the name of the column to be removed
      * @return this instance without the specified column
-     * @throws IllegalArgumentException if the specified column does not exist in the Dataframe
+     * @throws IllegalArgumentException if the specified column does not exist in the dataframe
      */
     public Dataframe dropColumn(String column)
     {
@@ -397,7 +397,7 @@ public class Dataframe implements Serializable, Cloneable
     }
 
     /**
-     * Sets the values for a given row
+     * Sets the values for a given row. Only values for columns in the dataframe are set.
      *
      * @param n      row index
      * @param values values to set

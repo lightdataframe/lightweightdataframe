@@ -47,7 +47,7 @@ public class DataframeBisTest
 
     @Test
     public void testGetColumn_nonExistingColumn() {
-        assertEquals(0, dataframe.getColumn("NonExisting").size());
+        assertThrows(IllegalArgumentException.class, () -> dataframe.getColumn("NonExisting"));
     }
 
     @Test
